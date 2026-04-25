@@ -99,9 +99,6 @@
             height: calc(100% - 28px);
             border: none;
             border-radius: 8px
-            tranform-origin: top left;
-            tranform: scale(1);
-            overflow: hidden;
         }
         .close-cctv {
             position: absolute;
@@ -211,7 +208,12 @@
     // ─── CCTV Controls ────────────────────────────────────────────────────
     function openCCTV(name, url) {
         document.getElementById('cctv-title').innerText = '📹 ' + name;
-        document.getElementById('cctv-frame').src = url;
+        const frame = document.getElementById('cctv-frame');
+        frame.src = url;
+        frame.style.transform = 'scale(0.5)';
+        frame.style.tranformOrigin = 'top left';
+        frame.style.width = '200%';
+        frame.style.height = '200%';
         document.getElementById('cctv-overlay').style.display = 'flex';
     }
 
