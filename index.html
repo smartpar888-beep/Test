@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTT Smart Water Platform | Professional Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b1120;
+            --panel-bg: #151f32;
+            --border-color: rgba(255,255,255,0.06);
+            --color-critical: #ef4444;
+            --text-main: #f7fafc;
+        }
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        #header-panel {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr 0.8fr;
+            gap: 12px; padding: 12px 20px;
+            background-color: var(--panel-bg);
+            min-height: 120px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .responsive-text {
+            font-size: clamp(14px, 2.5vw, 22px); font-weight: 700;
+            text-align: center; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #blue-block   { background-color: #0000FF; border-radius: 8px; color: white; }
+        #green-block  { background-color: #4C9900; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        #right-group  { display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
+        .header-btn   { border-radius: 4px; text-decoration: none; color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; font-size: clamp(11px, 1.8vw, 14px); }
+        #red-block    { border: 1.5px solid var(--color-critical); color: var(--color-critical); background: rgba(239,68,68,0.1); }
+        #purple-block { background-color: #6a097d; }
+        #yellow-block { background-color: #FFFF00; color: #000; }
+        #pink-block   { background-color: #FF00FF; }
+        #pink-block select { width: 100%; height: 100%; background: transparent; border: none; color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer; text-align-last: center; appearance: none; }
+        #map-area { flex-grow: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
+
+        /* ── Marker label ── */
+        .mlabel {
+            font-family: 'Kanit', sans-serif !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
+            background: transparent !important;
+            border: none !important;
+            text-shadow:
+                -1px -1px 0 #000,
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 0px  2px 4px rgba(0,0,0,0.9) !important;
+            white-space: nowrap !important;
+            padding: 0 !important;
+            margin-top: 2px !important;
+        }
+
+        /* ── CCTV Overlay (Pop-up) ── */
+        #cctv-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        }
+        .cctv-modal {
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 12px;
+            position: relative;
+            width: 50vw;
+            max-width: 900px;
+            height: 50vh;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .cctv-modal-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+        .cctv-modal iframe {
+            width: 100%;
+            height: calc(100% - 28px);
+            border: none;
+            border-radius: 8px;
+        }
+        .close-cctv {
+            position: absolute;
+            top: -14px; right: -14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px; height: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            z-index: 10002;
+        }
+        .close-cctv:hover { background: #dc2626; }
+
+        #debug-log {
+            position: fixed; bottom: 10px; left: 10px;
+            background: rgba(0,0,0,0.85); color: #0f0;
+            font-size: 11px; padding: 8px 12px; border-radius: 6px;
+            z-index: 9999; max-width: 340px; max-height: 180px;
+            overflow-y: auto; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div id="header-panel">
+    <div id="blue-block"><h1 class="responsive-text">MTT Smart Water Platform</h1></div>
+    <div id="green-block">
+        <div id="w-temp" style="font-size:32px;font-weight:700;">--°C</div>
+        <div id="w-info" style="font-size:12px;">กำลังโหลด...</div>
+    </div>
+    <div id="right-group">
+        <div id="red-block" class="header-btn">
+            <span id="c-date">--/--/--</span>&nbsp;|&nbsp;<span id="c-time">00:00:00</span>
+        </div>
+        <a href="#" id="purple-block" class="header-btn">หน้าสรุป 1</a>
+        <a href="#" id="yellow-block" class="header-btn">หน้าสรุป 2</a>
+        <div id="pink-block" class="header-btn">
+            <select id="map-filter" onchange="updateView(this.value)">
+                <option value="all">แสดงทั้งหมด</option>
+                <option value="water">1. ระดับน้ำ (Staff)</option>
+                <option value="air">2. อากาศ (AQI)</option>
+                <option value="rain">3. ปริมาณฝน (Rain)</option>
+                <option value="cctv">4. กล้อง CCTV</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div id="map-area"><div id="map"></div></div>
+
+<!-- CCTV Pop-up Overlay -->
+<div id="cctv-overlay">
+    <div class="cctv-modal">
+        <button class="close-cctv" onclick="closeCCTV()">✕</button>
+        <div class="cctv-modal-title" id="cctv-title">📹 กล้อง</div>
+        <iframe id="cctv-frame" src="" allowfullscreen></iframe>
+    </div>
+</div>
+
+<div id="debug-log">🔌 กำลังเริ่มต้น...</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+<script>
+    const logEl = document.getElementById('debug-log');
+    function log(msg) { console.log(msg); logEl.innerHTML += '<br>' + msg; logEl.scrollTop = logEl.scrollHeight; }
+
+    // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] แก้ไข lat, lng และ url ─────────────
+    const CCTV_LIST = [
+            { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
+            { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.29' },
+            { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.1' },
+            { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.24' }
+
+        /*
+         💡 เพิ่มกล้องใหม่: คัดลอกบรรทัดข้างล่างแล้ววางต่อท้าย (อย่าลืมใส่ comma)
+         { id: 'cam4', name: 'กล้อง 4', lat: 13.xxxx, lng: 100.xxxx, url: 'https://...' },
+        */
+    ];
+
+    // ─── Firebase & Weather Config ────────────────────────────────────────
+    const FB_CONFIG = {
+        apiKey:            "AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY",
+        authDomain:        "city-prototype.firebaseapp.com",
+        projectId:         "city-prototype",
+        storageBucket:     "city-prototype.firebasestorage.app",
+        messagingSenderId: "587922189632",
+        appId:             "1:587922189632:web:e13e821623b81209465ea5"
+    };
+    const WEATHER_KEY = "ed164e97ac7646debe045126262903";
+
+    try { firebase.initializeApp(FB_CONFIG); log("✅ Firebase OK"); }
+    catch(e) { log("❌ " + e.message); }
+    const db = firebase.firestore();
+
+    let map;
+    let markers       = { water: {}, air: {}, rain: {} };
+    let cctvMarkers   = [];
+    let currentFilter = 'all';
+
+    // ─── CCTV Controls ────────────────────────────────────────────────────
+    function openCCTV(name, url) {
+        document.getElementById('cctv-title').innerText = '📹 ' + name;
+        document.getElementById('cctv-frame').src = url;
+        document.getElementById('cctv-overlay').style.display = 'flex';
+    }
+
+    function closeCCTV() {
+        document.getElementById('cctv-overlay').style.display = 'none';
+        document.getElementById('cctv-frame').src = '';
+    }
+
+    // ปิด overlay เมื่อคลิก background
+    document.getElementById('cctv-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeCCTV();
+    });
+
+    // ─── CCTV Markers ─────────────────────────────────────────────────────
+    function initCCTVMarkers() {
+        CCTV_LIST.forEach(cam => {
+            const svgIcon = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" fill="#1e40af" stroke="#93c5fd" stroke-width="2"/>
+                <rect x="8" y="15" width="16" height="11" rx="2" fill="white"/>
+                <polygon points="24,16 32,12 32,28 24,24" fill="white"/>
+                <circle cx="14" cy="20" r="2.5" fill="#1e40af"/>
+            </svg>`;
+
+            const marker = new google.maps.Marker({
+                position: { lat: cam.lat, lng: cam.lng },
+                map: (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
+                title: cam.name,
+                icon: {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
+                },
+                label: {
+                    text: cam.name,
+                    className: 'mlabel'
+                }
+            });
+
+            marker.addListener('click', () => openCCTV(cam.name, cam.url));
+            cctvMarkers.push(marker);
+        });
+        log(`📹 CCTV markers: ${CCTV_LIST.length} จุด`);
+    }
+
+    // ─── WEATHER ──────────────────────────────────────────────────────────
+    async function fetchWeather() {
+        try {
+            const res  = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHER_KEY}&q=13.9130,100.5515&days=1&lang=th`);
+            const data = await res.json();
+            document.getElementById('w-temp').innerText = Math.round(data.current.temp_c) + "°C";
+            document.getElementById('w-info').innerText =
+                `ฝน: ${data.forecast.forecastday[0].day.daily_chance_of_rain}% | ${data.current.condition.text}`;
+        } catch(e) { document.getElementById('w-info').innerText = "Weather Error"; }
+    }
+
+    // ─── CLOCK ────────────────────────────────────────────────────────────
+    setInterval(() => {
+        const n = new Date();
+        document.getElementById('c-time').innerText = n.toLocaleTimeString('th-TH', { timeZone:'Asia/Bangkok', hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
+    }, 1000);
+
+    // ─── SYNC FIRESTORE ───────────────────────────────────────────────────
+    function syncFirestore(collectionName, type) {
+        log(`📡 listen: ${collectionName}`);
+        db.collection(collectionName).onSnapshot(
+            (snapshot) => {
+                log(`📦 ${collectionName}: ${snapshot.size} docs`);
+                Object.values(markers[type]).forEach(m => m.setMap(null));
+                markers[type] = {};
+                if (snapshot.empty) { log(`⚠️ ไม่มีข้อมูลใน ${collectionName}`); return; }
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    log(`📌 ${doc.id} | lat:${d.latitude} lng:${d.longitude} val:${d.final_value}`);
+                    renderMarker(type, doc.id, d);
+                });
+            },
+            (err) => log(`❌ Firestore: ${err.message}`)
+        );
+    }
+
+    // ─── BUILD MARKER SVG ─────────────────────────────────────────────────
+    function buildIcon(type, cur, color) {
+        let svgBody = "";
+
+        if (type === 'water') {
+            const pct   = Math.max(0, Math.min(cur / 100, 1));
+            const tankH = 36; const tankY = 10; const tankX = 10; const tankW = 24;
+            const fillH = Math.round(tankH * pct);
+            const fillY = tankY + tankH - fillH;
+            svgBody = `
+              <ellipse cx="22" cy="58" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
+              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+              <rect x="${tankX}" y="${fillY}" width="${tankW}" height="${fillH}" fill="${color}" opacity="0.9"/>
+              <rect x="${tankX+2}" y="${tankY+2}" width="4" height="${tankH-4}" rx="2" fill="rgba(255,255,255,0.15)"/>
+              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
+              <text x="22" y="8" text-anchor="middle" font-size="9" fill="${color}">💧</text>
+            `;
+        } else if (type === 'air') {
+            svgBody = `
+              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
+              <circle cx="22" cy="26" r="20" fill="#1e293b" stroke="${color}" stroke-width="2" opacity="0.9"/>
+              <circle cx="22" cy="26" r="14" fill="${color}" opacity="0.85"/>
+              <text x="22" y="22" text-anchor="middle" font-size="8" fill="white" font-weight="bold">AQI</text>
+              <text x="22" y="33" text-anchor="middle" font-size="9" fill="white" font-weight="bold">${Math.round(cur)}</text>
+            `;
+        } else {
+            svgBody = `
+              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
+              <path d="M22 6 Q30 22 30 32 A8 8 0 1 1 14 32 Q14 22 22 6Z" fill="${color}" opacity="0.9" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+              <text x="22" y="33" text-anchor="middle" font-size="8.5" fill="white" font-weight="bold">${Math.round(cur)}</text>
+            `;
+        }
+
+        const svg = `<svg width="44" height="60" viewBox="0 0 44 60" xmlns="http://www.w3.org/2000/svg">${svgBody}</svg>`;
+        return {
+            url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+            scaledSize: new google.maps.Size(44, 60),
+            anchor:     new google.maps.Point(22, 58)
+        };
+    }
+
+    // ─── RENDER MARKER ────────────────────────────────────────────────────
+    function renderMarker(type, id, val) {
+        const lat = parseFloat(val.latitude);
+        const lng = parseFloat(val.longitude);
+        const cur = parseFloat(val.final_value) || 0;
+
+        if (isNaN(lat) || isNaN(lng)) { log(`⚠️ ${id}: lat/lng ผิด`); return; }
+
+        const color = val.alert_color
+            ? val.alert_color
+            : cur >= (val.criticalThreshold || 80) ? '#ef4444'
+            : cur >= (val.warningThreshold  || 50) ? '#fbbf24'
+            : '#10b981';
+
+        const unit = val.unit || (type === 'water' ? '%' : type === 'air' ? 'AQI' : 'mm');
+
+        let offset = 0;
+        if (currentFilter === 'all') {
+            if (type === 'air')  offset =  0.00045;
+            if (type === 'rain') offset = -0.00045;
+        }
+
+        const marker = new google.maps.Marker({
+            position:  { lat: lat + offset, lng: lng },
+            map:       (currentFilter === 'all' || currentFilter === type) ? map : null,
+            title:     val.point_name || id,
+            icon:      buildIcon(type, cur, color),
+            label: {
+                text:      `${cur}${unit}`,
+                className: 'mlabel'
+            }
+        });
+
+        const pointName   = val.point_name || id;
+        const infoContent = `
+            <div style="font-family:'Kanit',sans-serif;padding:8px 12px;min-width:140px;background:#1e293b;border-radius:8px;border:1px solid ${color};color:white;">
+                <div style="font-size:13px;font-weight:700;color:${color};margin-bottom:4px;">${pointName}</div>
+                <div style="font-size:20px;font-weight:700;">${cur} <span style="font-size:13px;opacity:0.7">${unit}</span></div>
+                <div style="font-size:11px;opacity:0.6;margin-top:4px;">lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)}</div>
+            </div>`;
+
+        const infoWindow = new google.maps.InfoWindow({ content: infoContent, disableAutoPan: true });
+        marker.addListener('mouseover', () => infoWindow.open(map, marker));
+        marker.addListener('mouseout',  () => infoWindow.close());
+        marker.addListener('click',     () => infoWindow.open(map, marker));
+
+        markers[type][id] = marker;
+    }
+
+    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────────────────
+    window.updateView = (v) => {
+        currentFilter = v;
+        // sensor markers
+        ['water', 'air', 'rain'].forEach(t =>
+            Object.values(markers[t]).forEach(m =>
+                m.setMap((v === 'all' || v === t) ? map : null)
+            )
+        );
+        // CCTV markers
+        const showCCTV = (v === 'all' || v === 'cctv');
+        cctvMarkers.forEach(m => m.setMap(showCCTV ? map : null));
+    };
+
+    // ─── INIT MAP ─────────────────────────────────────────────────────────
+    window.initMap = function() {
+        log("🗺️ Google Map พร้อม");
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 14,
+            center: { lat: 13.9130, lng: 100.5515 },
+            mapTypeControl: true,
+            mapTypeControlOptions: {
+                style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                position: google.maps.ControlPosition.TOP_RIGHT
+            }
+        });
+        initCCTVMarkers();
+        syncFirestore('water_monitoring', 'water');
+        syncFirestore('air_monitoring',   'air');
+        syncFirestore('rain_monitoring',  'rain');
+    };
+
+    fetchWeather();
+    log("⏳ รอ Google Maps...");
+</script>
+
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBNYJO8FrVC2HorQBCquot9HFLoE3Fhs-s&callback=initMap&loading=async">
+</script>
+
+</body>
+</html>
+
