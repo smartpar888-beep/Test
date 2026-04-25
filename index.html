@@ -211,13 +211,10 @@
         document.getElementById('cctv-title').innerText = '📹 ' + name;
         const frame = document.getElementById('cctv-frame');
         frame.src = url;
-        frame.style.position = 'absolute';
-        frame.style.top = '28px';
-        frame.style.left = '0';
-        frame.style.width = '286%';
-        frame.style.height = 'calc(286%-28px)';
-        frame.style.transformOrigin = 'center center';
-        frame.style.transform = 'scale(0.35)';
+        frame.style.width = '100%';
+        frame.style.height = 'calc(100%-28px)';
+        frame.style.transform = '';
+        frame.style.zoom = '0.35';
         document.getElementById('cctv-overlay').style.display = 'flex';
     }
 
