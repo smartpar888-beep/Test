@@ -8,60 +8,229 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         :root {
-            --bg-color: #0b1120;
-            --panel-bg: #151f32;
-            --border-color: rgba(255,255,255,0.06);
+            --bg-primary: #f8f9fc;
+            --bg-secondary: #ffffff;
+            --panel-bg: #ffffff;
+            --border-color: rgba(139, 92, 246, 0.08);
+            --text-main: #1a202c;
+            --text-secondary: #718096;
+            --color-primary: #8b5cf6;
+            --color-accent: #06b6d4;
             --color-critical: #ef4444;
-            --text-main: #f7fafc;
+            --color-warning: #f59e0b;
+            --color-success: #10b981;
+            --shadow-sm: 0 1px 2px 0 rgba(139, 92, 246, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(139, 92, 246, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(139, 92, 246, 0.12);
         }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Kanit', sans-serif;
-            margin: 0; padding: 0;
-            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-primary);
             color: var(--text-main);
             height: 100vh;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
+        
         #header-panel {
             display: grid;
             grid-template-columns: 2.2fr 1fr 0.8fr;
-            gap: 12px; padding: 12px 20px;
-            background-color: var(--panel-bg);
+            gap: 16px;
+            padding: 20px 24px;
+            background-color: var(--bg-secondary);
             min-height: 120px;
             border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
         }
+        
         .responsive-text {
-            font-size: clamp(14px, 2.5vw, 22px); font-weight: 700;
-            text-align: center; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
+            font-size: clamp(16px, 2.5vw, 24px);
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
         }
-        #blue-block   { background-color: #0000FF; border-radius: 8px; color: white; }
-        #green-block  { background-color: #4C9900; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        #right-group  { display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
-        .header-btn   { border-radius: 4px; text-decoration: none; color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; font-size: clamp(11px, 1.8vw, 14px); }
-        #red-block    { border: 1.5px solid var(--color-critical); color: var(--color-critical); background: rgba(239,68,68,0.1); }
-        #purple-block { background-color: #6a097d; }
-        #yellow-block { background-color: #FFFF00; color: #000; }
-        #pink-block   { background-color: #FF00FF; }
-        #pink-block select { width: 100%; height: 100%; background: transparent; border: none; color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer; text-align-last: center; appearance: none; }
-        #map-area { flex-grow: 1; position: relative; }
-        #map { width: 100%; height: 100%; }
+        
+        #blue-block {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        #blue-block:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%);
+        }
+        
+        #blue-block h1 {
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        
+        #green-block {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(34, 197, 94, 0.05) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            transition: all 0.3s ease;
+            padding: 12px 16px;
+        }
+        
+        #green-block:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(34, 197, 94, 0.08) 100%);
+        }
+        
+        #w-temp {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-success);
+            letter-spacing: -1px;
+        }
+        
+        #w-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-top: 4px;
+        }
+        
+        #right-group {
+            display: grid;
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px;
+        }
+        
+        .header-btn {
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(11px, 1.8vw, 13px);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            padding: 0 12px;
+        }
+        
+        .header-btn:hover {
+            background-color: var(--bg-primary);
+            border-color: var(--color-primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        #red-block {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(249, 115, 115, 0.04) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+            font-weight: 600;
+        }
+        
+        #red-block:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 115, 0.08) 100%);
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        
+        #purple-block {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.06) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        
+        #purple-block:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);
+            border-color: rgba(139, 92, 246, 0.25);
+        }
+        
+        #yellow-block {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.06) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            font-weight: 600;
+        }
+        
+        #yellow-block:hover {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%);
+            border-color: rgba(245, 158, 11, 0.25);
+        }
+        
+        #pink-block {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(34, 211, 238, 0.06) 100%);
+            border: 1px solid rgba(6, 182, 212, 0.15);
+            color: #0891b2;
+            font-weight: 600;
+            padding: 0;
+        }
+        
+        #pink-block:hover {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%);
+            border-color: rgba(6, 182, 212, 0.25);
+        }
+        
+        #pink-block select {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #0891b2;
+            font-family: 'Kanit', sans-serif;
+            font-weight: 600;
+            font-size: inherit;
+            cursor: pointer;
+            text-align-last: center;
+            padding: 6px 12px;
+            appearance: none;
+        }
+        
+        #map-area {
+            flex-grow: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
 
         /* ── Marker label ── */
         .mlabel {
             font-family: 'Kanit', sans-serif !important;
             font-size: 12px !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
             color: #ffffff !important;
             background: transparent !important;
             border: none !important;
             text-shadow:
-                -1px -1px 0 #000,
-                 1px -1px 0 #000,
-                -1px  1px 0 #000,
-                 1px  1px 0 #000,
-                 0px  2px 4px rgba(0,0,0,0.9) !important;
+                -1px -1px 0 rgba(0,0,0,0.4),
+                 1px -1px 0 rgba(0,0,0,0.4),
+                -1px  1px 0 rgba(0,0,0,0.4),
+                 1px  1px 0 rgba(0,0,0,0.4),
+                 0px  2px 4px rgba(0,0,0,0.3) !important;
             white-space: nowrap !important;
             padding: 0 !important;
             margin-top: 2px !important;
@@ -70,112 +239,149 @@
         /* ── Data Chart Overlay (Pop-up) ── */
         #chart-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45);
             display: none;
             justify-content: center;
             align-items: center;
             z-index: 10001;
+            backdrop-filter: blur(3px);
         }
+        
         .chart-modal {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
             position: relative;
             width: 70vw;
             max-width: 1000px;
             height: 65vh;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
         }
+        
         .chart-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border-color);
         }
+        
         .chart-modal-title {
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--text-main);
         }
+        
         .chart-controls {
             display: flex;
             gap: 12px;
             align-items: center;
         }
+        
         .chart-range-select {
-            background: #0f1729;
+            background: var(--bg-primary);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 4px;
+            padding: 8px 14px;
+            border-radius: 8px;
             font-family: 'Kanit', sans-serif;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
             font-size: 12px;
+            transition: all 0.3s ease;
         }
+        
         .chart-range-select:hover {
-            background: #151f32;
+            background: var(--bg-secondary);
+            border-color: var(--color-primary);
         }
+        
         .chart-container {
             flex-grow: 1;
             position: relative;
             overflow: hidden;
         }
+        
         .chart-container canvas {
             max-height: 100%;
         }
+        
         .close-chart {
             position: absolute;
-            top: 12px; right: 12px;
-            background: #ef4444;
+            top: 16px;
+            right: 16px;
+            background: var(--color-critical);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 32px; height: 32px;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
             z-index: 10002;
+            transition: all 0.3s ease;
         }
-        .close-chart:hover { background: #dc2626; }
+        
+        .close-chart:hover {
+            background: #dc2626;
+            transform: scale(1.08);
+        }
 
         /* ── CCTV toast notification ── */
         #cctv-toast {
             position: fixed;
-            bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
-            background: #1e293b;
-            border: 1px solid #3b82f6;
-            color: white;
-            padding: 12px 20px;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--color-accent);
+            color: var(--text-main);
+            padding: 14px 20px;
             border-radius: 10px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 500;
             z-index: 10001;
             opacity: 0;
             transition: all 0.3s ease;
             white-space: nowrap;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: var(--shadow-lg);
             pointer-events: none;
         }
+        
         #cctv-toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
         #debug-log {
-            position: fixed; bottom: 10px; left: 10px;
-            background: rgba(0,0,0,0.85); color: #0f0;
-            font-size: 11px; padding: 8px 12px; border-radius: 6px;
-            z-index: 9999; max-width: 340px; max-height: 180px;
-            overflow-y: auto; font-family: monospace;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--color-primary);
+            font-size: 11px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            z-index: 9999;
+            max-width: 340px;
+            max-height: 180px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
         }
     </style>
 </head>
@@ -184,8 +390,8 @@
 <div id="header-panel">
     <div id="blue-block"><h1 class="responsive-text">MTT Smart Water Platform</h1></div>
     <div id="green-block">
-        <div id="w-temp" style="font-size:32px;font-weight:700;">--°C</div>
-        <div id="w-info" style="font-size:12px;">กำลังโหลด...</div>
+        <div id="w-temp" style="">--°C</div>
+        <div id="w-info" style="">กำลังโหลด...</div>
     </div>
     <div id="right-group">
         <div id="red-block" class="header-btn">
@@ -242,9 +448,9 @@
     // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] ─────────────────────────────────────
     const CCTV_LIST = [
         { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
-        { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.1' },
-        { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.29' },
-        { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.24' }
+        { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam01' },
+        { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam02' },
+        { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam03' },
     ];
 
     // ─── Firebase & Weather Config ────────────────────────────────────────
@@ -365,11 +571,11 @@
                     borderWidth:          2,
                     fill:                 true,
                     tension:              0.4,
-                    pointRadius:          3,
+                    pointRadius:          4,
                     pointBackgroundColor: color,
                     pointBorderColor:     '#fff',
-                    pointBorderWidth:     1,
-                    pointHoverRadius:     5
+                    pointBorderWidth:     1.5,
+                    pointHoverRadius:     6
                 }]
             },
             options: {
@@ -378,27 +584,31 @@
                 plugins: {
                     legend: {
                         display: true,
-                        labels: { color: '#94a3b8', font: { family: "'Kanit', sans-serif", size: 12 } }
+                        labels: { 
+                            color: '#718096', 
+                            font: { family: "'Kanit', sans-serif", size: 12, weight: 500 },
+                            padding: 16
+                        }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor:      '#fff',
-                        bodyColor:       '#94a3b8',
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        titleColor:      '#1a202c',
+                        bodyColor:       '#718096',
                         borderColor:     color,
-                        borderWidth:     1,
-                        padding:         10,
-                        titleFont:       { family: "'Kanit', sans-serif" },
-                        bodyFont:        { family: "'Kanit', sans-serif" }
+                        borderWidth:     1.5,
+                        padding:         12,
+                        titleFont:       { family: "'Kanit', sans-serif", weight: 600 },
+                        bodyFont:        { family: "'Kanit', sans-serif", weight: 500 }
                     }
                 },
                 scales: {
                     x: {
-                        grid:  { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } }
+                        grid:  { color: 'rgba(139, 92, 246, 0.05)' },
+                        ticks: { color: '#718096', font: { family: "'Kanit', sans-serif", weight: 500 } }
                     },
                     y: {
-                        grid:          { color: 'rgba(255,255,255,0.05)' },
-                        ticks:         { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } },
+                        grid:          { color: 'rgba(139, 92, 246, 0.05)' },
+                        ticks:         { color: '#718096', font: { family: "'Kanit', sans-serif", weight: 500 } },
                         beginAtZero:   true
                     }
                 }
@@ -432,10 +642,10 @@
     function initCCTVMarkers() {
         CCTV_LIST.forEach(cam => {
             const svgIcon = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="20" r="18" fill="#1e40af" stroke="#93c5fd" stroke-width="2"/>
+                <circle cx="20" cy="20" r="18" fill="#8b5cf6" stroke="#c4b5fd" stroke-width="2"/>
                 <rect x="8" y="15" width="16" height="11" rx="2" fill="white"/>
                 <polygon points="24,16 32,12 32,28 24,24" fill="white"/>
-                <circle cx="14" cy="20" r="2.5" fill="#1e40af"/>
+                <circle cx="14" cy="20" r="2.5" fill="#8b5cf6"/>
             </svg>`;
 
             const marker = new google.maps.Marker({
@@ -538,26 +748,26 @@
             const fillH = Math.round(tankH * pct);
             const fillY = tankY + tankH - fillH;
             svgBody = `
-              <ellipse cx="22" cy="58" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
-              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+              <ellipse cx="22" cy="58" rx="10" ry="3" fill="rgba(0,0,0,0.15)"/>
+              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="#f0f4f8" stroke="rgba(139, 92, 246, 0.2)" stroke-width="1.5"/>
               <rect x="${tankX}" y="${fillY}" width="${tankW}" height="${fillH}" fill="${color}" opacity="0.9"/>
-              <rect x="${tankX+2}" y="${tankY+2}" width="4" height="${tankH-4}" rx="2" fill="rgba(255,255,255,0.15)"/>
-              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
+              <rect x="${tankX+2}" y="${tankY+2}" width="4" height="${tankH-4}" rx="2" fill="rgba(255,255,255,0.25)"/>
+              <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="5" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
               <text x="22" y="8" text-anchor="middle" font-size="9" fill="${color}">💧</text>
             `;
         } else if (type === 'air') {
             svgBody = `
-              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
-              <circle cx="22" cy="26" r="20" fill="#1e293b" stroke="${color}" stroke-width="2" opacity="0.9"/>
+              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.15)"/>
+              <circle cx="22" cy="26" r="20" fill="#f0f4f8" stroke="${color}" stroke-width="2" opacity="0.95"/>
               <circle cx="22" cy="26" r="14" fill="${color}" opacity="0.85"/>
               <text x="22" y="22" text-anchor="middle" font-size="8" fill="white" font-weight="bold">AQI</text>
-              <text x="22" y="33" text-anchor="middle" font-size="9" fill="white" font-weight="bold">${Math.round(cur)}</text>
+              <text x="22" y="33" text-anchor="middle" font-size="9" fill="white" font-weight="600">${Math.round(cur)}</text>
             `;
         } else {
             svgBody = `
-              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.25)"/>
+              <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(0,0,0,0.15)"/>
               <path d="M22 6 Q30 22 30 32 A8 8 0 1 1 14 32 Q14 22 22 6Z" fill="${color}" opacity="0.9" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-              <text x="22" y="33" text-anchor="middle" font-size="8.5" fill="white" font-weight="bold">${Math.round(cur)}</text>
+              <text x="22" y="33" text-anchor="middle" font-size="8.5" fill="white" font-weight="600">${Math.round(cur)}</text>
             `;
         }
 
@@ -580,7 +790,7 @@
         const color = val.alert_color
             ? val.alert_color
             : cur >= (val.criticalThreshold || 80) ? '#ef4444'
-            : cur >= (val.warningThreshold  || 50) ? '#fbbf24'
+            : cur >= (val.warningThreshold  || 50) ? '#f59e0b'
             : '#10b981';
 
         const unit = val.unit || (type === 'water' ? '%' : type === 'air' ? 'AQI' : 'mm');
@@ -604,10 +814,10 @@
 
         const pointName   = val.point_name || String(pointId);
         const infoContent = `
-            <div style="font-family:'Kanit',sans-serif;padding:8px 12px;min-width:140px;background:#1e293b;border-radius:8px;border:1px solid ${color};color:white;">
-                <div style="font-size:13px;font-weight:700;color:${color};margin-bottom:4px;">${pointName}</div>
-                <div style="font-size:20px;font-weight:700;">${cur} <span style="font-size:13px;opacity:0.7">${unit}</span></div>
-                <div style="font-size:11px;opacity:0.6;margin-top:4px;">lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)}</div>
+            <div style="font-family:'Kanit',sans-serif;padding:12px 16px;min-width:160px;background:#ffffff;border-radius:10px;border:1px solid ${color};color:#1a202c;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:6px;">${pointName}</div>
+                <div style="font-size:24px;font-weight:600;color:#1a202c;">${cur} <span style="font-size:13px;opacity:0.6;font-weight:500;">${unit}</span></div>
+                <div style="font-size:11px;opacity:0.5;margin-top:6px;color:#718096;">lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)}</div>
             </div>`;
 
         const infoWindow = new google.maps.InfoWindow({ content: infoContent, disableAutoPan: true });
