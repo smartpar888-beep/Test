@@ -147,57 +147,28 @@
         }
         .close-chart:hover { background: #dc2626; }
 
-        /* ── CCTV Overlay (Pop-up) ── */
-        #cctv-overlay {
+        /* ── CCTV toast notification ── */
+        #cctv-toast {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10001;
-        }
-        .cctv-modal {
+            bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
             background: #1e293b;
-            padding: 12px;
-            border-radius: 12px;
-            position: relative;
-            width: 50vw;
-            max-width: 900px;
-            height: 50vh;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-        }
-        .cctv-modal-title {
+            border: 1px solid #3b82f6;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
             font-size: 13px;
             font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 8px;
-            padding-left: 4px;
+            z-index: 10001;
+            opacity: 0;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
-        .cctv-modal iframe {
-            width: 100%;
-            height: calc(100% - 28px);
-            border: none;
-            border-radius: 8px
+        #cctv-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
-        .close-cctv {
-            position: absolute;
-            top: -14px; right: -14px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px; height: 30px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            z-index: 10002;
-        }
-        .close-cctv:hover { background: #dc2626; }
 
         #debug-log {
             position: fixed; bottom: 10px; left: 10px;
@@ -256,14 +227,8 @@
     </div>
 </div>
 
-<!-- CCTV Pop-up Overlay -->
-<div id="cctv-overlay">
-    <div class="cctv-modal">
-        <button class="close-cctv" onclick="closeCCTV()">✕</button>
-        <div class="cctv-modal-title" id="cctv-title">📹 กล้อง</div>
-        <iframe id="cctv-frame" src="" allowfullscreen></iframe>
-    </div>
-</div>
+<!-- CCTV Toast -->
+<div id="cctv-toast">📹 <span id="cctv-toast-name"></span> — กำลังเปิดหน้าต่างใหม่...</div>
 
 <div id="debug-log">🔌 กำลังเริ่มต้น...</div>
 
@@ -446,22 +411,22 @@
     });
 
     // ─── CCTV Controls ────────────────────────────────────────────────────
+    // เว็บ CCTV ปลายทาง detect iframe แล้ว redirect ไปหน้า error (server-side)
+    // แก้โดยเปิด window.open() แทน — browser เห็นเป็น direct navigation ปกติ
     function openCCTV(name, url) {
-        document.getElementById('cctv-title').innerText = '📹 ' + name;
-        const frame   = document.getElementById('cctv-frame');
-        frame.src     = url;
-        frame.style.zoom = '0.25';
-        document.getElementById('cctv-overlay').style.display = 'flex';
+        const w    = Math.round(window.screen.width  * 0.75);
+        const h    = Math.round(window.screen.height * 0.75);
+        const left = Math.round((window.screen.width  - w) / 2);
+        const top  = Math.round((window.screen.height - h) / 2);
+        window.open(url, 'cctv_' + name,
+            `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+        );
+        // แสดง toast แจ้งผู้ใช้
+        const toast = document.getElementById('cctv-toast');
+        document.getElementById('cctv-toast-name').innerText = name;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
     }
-
-    function closeCCTV() {
-        document.getElementById('cctv-overlay').style.display = 'none';
-        document.getElementById('cctv-frame').src = '';
-    }
-
-    document.getElementById('cctv-overlay').addEventListener('click', function(e) {
-        if (e.target === this) closeCCTV();
-    });
 
     // ─── CCTV Markers ─────────────────────────────────────────────────────
     function initCCTVMarkers() {
