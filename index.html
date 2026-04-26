@@ -308,7 +308,34 @@
     let currentFilter = 'all';
     let chartInstance = null;
     let currentChartData = null;
-    let allHistoricalData = { water: {}, air: {}, rain: {} }; // Store all data for filtering
+    let allHistoricalData = { water: {}, air: {}, rain: {} };
+
+    // ─── Helper: Convert Firestore Timestamp to Date ─────────────────────
+    function parseFirestoreTimestamp(timestamp) {
+        if (!timestamp) return null;
+        
+        // Firebase Timestamp object
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+        }
+        
+        // Seconds property (Firestore Timestamp structure)
+        if (typeof timestamp === 'object' && timestamp.seconds !== undefined) {
+            return new Date(timestamp.seconds * 1000);
+        }
+        
+        // String ISO format
+        if (typeof timestamp === 'string') {
+            return new Date(timestamp);
+        }
+        
+        // JavaScript Date
+        if (timestamp instanceof Date) {
+            return timestamp;
+        }
+        
+        return null;
+    }
 
     // ─── Chart Controls ───────────────────────────────────────────────────
     function openChart(type, id, pointName, unit, color) {
@@ -339,24 +366,22 @@
 
         const startDate = new Date(now);
         startDate.setDate(startDate.getDate() - days);
+        startDate.setHours(0, 0, 0, 0);
+
+        log(`📊 Filtering from ${startDate.toLocaleDateString('th-TH')} to ${now.toLocaleDateString('th-TH')}`);
 
         // Filter data within the date range
         allData.forEach(item => {
-            let itemDate;
+            let itemDate = parseFirestoreTimestamp(item.timestamp);
             
-            // Handle different timestamp formats
-            if (item.timestamp) {
-                if (item.timestamp.toDate) {
-                    itemDate = item.timestamp.toDate();
-                } else if (typeof item.timestamp === 'string') {
-                    itemDate = new Date(item.timestamp);
-                } else if (item.timestamp instanceof Date) {
-                    itemDate = item.timestamp;
+            if (itemDate) {
+                log(`   ✓ Found timestamp: ${itemDate.toLocaleString('th-TH')}`);
+                if (itemDate >= startDate && itemDate <= now) {
+                    filtered.push({ 
+                        date: itemDate, 
+                        value: parseFloat(item.final_value) || 0 
+                    });
                 }
-            }
-
-            if (itemDate && itemDate >= startDate && itemDate <= now) {
-                filtered.push({ date: itemDate, value: item.final_value });
             }
         });
 
@@ -374,12 +399,12 @@
         // Get all historical data for this point
         const pointData = allHistoricalData[type][id] || [];
         
-        log(`📊 Found ${pointData.length} records for ${id}`);
+        log(`📊 Total records found: ${pointData.length}`);
 
         // Filter by range
         const filtered = filterDataByRange(range, pointData);
         
-        log(`📊 Filtered to ${filtered.length} records for ${range}`);
+        log(`📊 Filtered records: ${filtered.length} for ${range}`);
 
         // Prepare chart data
         const labels = filtered.map(item => 
@@ -387,12 +412,13 @@
                 range === 'year' ? { month: 'short' } : { month: 'short', day: 'numeric' }
             )
         );
-        const data = filtered.map(item => parseFloat(item.value) || 0);
+        const data = filtered.map(item => item.value);
 
         // If no data, show mock data
         if (data.length === 0) {
-            log(`⚠️ ไม่มีข้อมูลสำหรับ ${range}`);
-            for (let i = range === 'week' ? 7 : range === 'month' ? 30 : 365; i > 0; i--) {
+            log(`⚠️ ไม่มีข้อมูลสำหรับ ${range} - ใช้ Mock Data`);
+            const dayCount = range === 'week' ? 7 : range === 'month' ? 30 : 365;
+            for (let i = dayCount - 1; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 labels.push(date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
@@ -467,7 +493,7 @@
         if (e.target === this) closeChart();
     });
 
-    // ─── CCTV Controls ───────────────────────────────────────────────────
+    // ─── CCTV Controls ────────────────────────────────────────────────────
     function openCCTV(name, url) {
         document.getElementById('cctv-title').innerText = '📹 ' + name;
         const frame = document.getElementById('cctv-frame');
@@ -552,7 +578,7 @@
                 
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    log(`📌 ${doc.id} | lat:${d.latitude} lng:${d.longitude} val:${d.final_value}`);
+                    log(`📌 ${doc.id} | lat:${d.latitude} lng:${d.longitude} val:${d.final_value} ts:${d.timestamp}`);
                     
                     // Store ALL data (including timestamp) for chart
                     if (!allHistoricalData[type][doc.id]) {
@@ -664,7 +690,7 @@
         markers[type][id] = marker;
     }
 
-    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────���───────────
+    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────────────────
     window.updateView = (v) => {
         currentFilter = v;
         // sensor markers
