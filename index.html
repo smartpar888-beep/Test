@@ -274,17 +274,12 @@
     const logEl = document.getElementById('debug-log');
     function log(msg) { console.log(msg); logEl.innerHTML += '<br>' + msg; logEl.scrollTop = logEl.scrollHeight; }
 
-    // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] แก้ไข lat, lng และ url ─────────────
+    // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] ─────────────────────────────────────
     const CCTV_LIST = [
-            { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
-            { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/bang13' },
-            { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/koh' },
-            { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/chuang' }
-
-        /*
-         💡 เพิ่มกล้องใหม่: คัดลอกบรรทัดข้างล่างแล้ววางต่อท้าย (อย่าลืมใส่ comma)
-         { id: 'cam4', name: 'กล้อง 4', lat: 13.xxxx, lng: 100.xxxx, url: 'https://...' },
-        */
+        { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
+        { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/bang13' },
+        { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/koh' },
+        { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/chuang' }
     ];
 
     // ─── Firebase & Weather Config ────────────────────────────────────────
@@ -303,44 +298,28 @@
     const db = firebase.firestore();
 
     let map;
-    let markers       = { water: {}, air: {}, rain: {} };
-    let cctvMarkers   = [];
-    let currentFilter = 'all';
-    let chartInstance = null;
-    let currentChartData = null;
+    let markers           = { water: {}, air: {}, rain: {} };
+    let cctvMarkers       = [];
+    let currentFilter     = 'all';
+    let chartInstance     = null;
+    let currentChartData  = null;
+    // allHistoricalData[type][point_id] = [ ...all docs for that point ]
     let allHistoricalData = { water: {}, air: {}, rain: {} };
 
-    // ─── Helper: Convert Firestore Timestamp to Date ─────────────────────
+    // ─── Helper: Convert Firestore Timestamp → JS Date ───────────────────
     function parseFirestoreTimestamp(timestamp) {
         if (!timestamp) return null;
-        
-        // Firebase Timestamp object
-        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-            return timestamp.toDate();
-        }
-        
-        // Seconds property (Firestore Timestamp structure)
-        if (typeof timestamp === 'object' && timestamp.seconds !== undefined) {
-            return new Date(timestamp.seconds * 1000);
-        }
-        
-        // String ISO format
-        if (typeof timestamp === 'string') {
-            return new Date(timestamp);
-        }
-        
-        // JavaScript Date
-        if (timestamp instanceof Date) {
-            return timestamp;
-        }
-        
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') return timestamp.toDate();
+        if (typeof timestamp === 'object' && timestamp.seconds !== undefined) return new Date(timestamp.seconds * 1000);
+        if (typeof timestamp === 'string') return new Date(timestamp);
+        if (timestamp instanceof Date) return timestamp;
         return null;
     }
 
     // ─── Chart Controls ───────────────────────────────────────────────────
-    function openChart(type, id, pointName, unit, color) {
+    function openChart(type, pointId, pointName, unit, color) {
         document.getElementById('chart-title').innerText = `📊 ${pointName}`;
-        currentChartData = { type, id, pointName, unit, color };
+        currentChartData = { type, pointId, pointName, unit, color };
         document.getElementById('chart-range').value = 'month';
         document.getElementById('chart-overlay').style.display = 'flex';
         updateChart();
@@ -348,147 +327,120 @@
 
     function closeChart() {
         document.getElementById('chart-overlay').style.display = 'none';
-        if (chartInstance) {
-            chartInstance.destroy();
-            chartInstance = null;
-        }
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     }
 
-    // Filter historical data by date range
+    // ─── Filter historical data by date range ────────────────────────────
     function filterDataByRange(range, allData) {
-        const now = new Date();
-        const filtered = [];
-        let days = 30;
-
-        if (range === 'week') days = 7;
-        if (range === 'month') days = 30;
-        if (range === 'year') days = 365;
-
+        const now       = new Date();
+        const days      = range === 'week' ? 7 : range === 'year' ? 365 : 30;
         const startDate = new Date(now);
         startDate.setDate(startDate.getDate() - days);
         startDate.setHours(0, 0, 0, 0);
 
-        log(`📊 Filtering from ${startDate.toLocaleDateString('th-TH')} to ${now.toLocaleDateString('th-TH')}`);
+        log(`📊 ช่วง: ${startDate.toLocaleDateString('th-TH')} → ${now.toLocaleDateString('th-TH')}`);
 
-        // Filter data within the date range
+        const filtered = [];
         allData.forEach(item => {
-            let itemDate = parseFirestoreTimestamp(item.timestamp);
-            
-            if (itemDate) {
-                log(`   ✓ Found timestamp: ${itemDate.toLocaleString('th-TH')}`);
-                if (itemDate >= startDate && itemDate <= now) {
-                    filtered.push({ 
-                        date: itemDate, 
-                        value: parseFloat(item.final_value) || 0 
-                    });
-                }
+            const itemDate = parseFirestoreTimestamp(item.timestamp);
+            if (itemDate && itemDate >= startDate && itemDate <= now) {
+                filtered.push({ date: itemDate, value: parseFloat(item.final_value) || 0 });
             }
         });
 
-        // Sort by date
         filtered.sort((a, b) => a.date - b.date);
+        log(`📊 ผลลัพธ์: ${filtered.length} records`);
         return filtered;
     }
 
     function updateChart() {
         if (!currentChartData) return;
 
-        const range = document.getElementById('chart-range').value;
-        const { type, id, pointName, unit, color } = currentChartData;
+        const range                          = document.getElementById('chart-range').value;
+        const { type, pointId, pointName, unit, color } = currentChartData;
 
-        // Get all historical data for this point
-        const pointData = allHistoricalData[type][id] || [];
-        
-        log(`📊 Total records found: ${pointData.length}`);
+        // ── ดึง historical data โดยใช้ point_id เป็น key ──
+        const pointData = allHistoricalData[type][pointId] || [];
+        log(`📊 records ทั้งหมดของ point ${pointId}: ${pointData.length}`);
 
-        // Filter by range
         const filtered = filterDataByRange(range, pointData);
-        
-        log(`📊 Filtered records: ${filtered.length} for ${range}`);
 
-        // Prepare chart data
-        const labels = filtered.map(item => 
-            item.date.toLocaleDateString('th-TH', 
-                range === 'year' ? { month: 'short' } : { month: 'short', day: 'numeric' }
+        const labels = filtered.map(item =>
+            item.date.toLocaleDateString('th-TH',
+                range === 'year'
+                    ? { month: 'short' }
+                    : { month: 'short', day: 'numeric' }
             )
         );
         const data = filtered.map(item => item.value);
 
-        // If no data, show mock data
+        // ถ้าไม่มีข้อมูลจริง แสดง mock เพื่อ debug
         if (data.length === 0) {
-            log(`⚠️ ไม่มีข้อมูลสำหรับ ${range} - ใช้ Mock Data`);
+            log(`⚠️ ไม่มีข้อมูลใน range นี้ — แสดง mock data`);
             const dayCount = range === 'week' ? 7 : range === 'month' ? 30 : 365;
             for (let i = dayCount - 1; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                labels.push(date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
-                data.push(50 + Math.random() * 20);
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
+                data.push(+(50 + Math.random() * 20).toFixed(2));
             }
         }
 
-        const chartCanvas = document.getElementById('historical-chart');
-        
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
+        if (chartInstance) { chartInstance.destroy(); }
 
-        chartInstance = new Chart(chartCanvas, {
+        chartInstance = new Chart(document.getElementById('historical-chart'), {
             type: 'line',
             data: {
-                labels: labels,
+                labels,
                 datasets: [{
-                    label: `${pointName} (${unit})`,
-                    data: data,
-                    borderColor: color,
-                    backgroundColor: color + '20',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 3,
+                    label:                `${pointName} (${unit})`,
+                    data,
+                    borderColor:          color,
+                    backgroundColor:      color + '20',
+                    borderWidth:          2,
+                    fill:                 true,
+                    tension:              0.4,
+                    pointRadius:          3,
                     pointBackgroundColor: color,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 1,
-                    pointHoverRadius: 5
+                    pointBorderColor:     '#fff',
+                    pointBorderWidth:     1,
+                    pointHoverRadius:     5
                 }]
             },
             options: {
-                responsive: true,
+                responsive:          true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         display: true,
-                        labels: {
-                            color: '#94a3b8',
-                            font: { family: "'Kanit', sans-serif", size: 12 }
-                        }
+                        labels: { color: '#94a3b8', font: { family: "'Kanit', sans-serif", size: 12 } }
                     },
                     tooltip: {
                         backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#94a3b8',
-                        borderColor: color,
-                        borderWidth: 1,
-                        padding: 10,
-                        titleFont: { family: "'Kanit', sans-serif" },
-                        bodyFont: { family: "'Kanit', sans-serif" }
+                        titleColor:      '#fff',
+                        bodyColor:       '#94a3b8',
+                        borderColor:     color,
+                        borderWidth:     1,
+                        padding:         10,
+                        titleFont:       { family: "'Kanit', sans-serif" },
+                        bodyFont:        { family: "'Kanit', sans-serif" }
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        grid:  { color: 'rgba(255,255,255,0.05)' },
                         ticks: { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } }
                     },
                     y: {
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } },
-                        beginAtZero: true
+                        grid:          { color: 'rgba(255,255,255,0.05)' },
+                        ticks:         { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } },
+                        beginAtZero:   true
                     }
                 }
             }
         });
     }
 
-    // ปิด overlay เมื่อคลิก background
     document.getElementById('chart-overlay').addEventListener('click', function(e) {
         if (e.target === this) closeChart();
     });
@@ -496,11 +448,8 @@
     // ─── CCTV Controls ────────────────────────────────────────────────────
     function openCCTV(name, url) {
         document.getElementById('cctv-title').innerText = '📹 ' + name;
-        const frame = document.getElementById('cctv-frame');
-        frame.src = url;
-        frame.style.width = '100%';
-        frame.style.height = 'calc(100%-28px)';
-        frame.style.transform = '';
+        const frame   = document.getElementById('cctv-frame');
+        frame.src     = url;
         frame.style.zoom = '0.25';
         document.getElementById('cctv-overlay').style.display = 'flex';
     }
@@ -510,7 +459,6 @@
         document.getElementById('cctv-frame').src = '';
     }
 
-    // ปิด overlay เมื่อคลิก background
     document.getElementById('cctv-overlay').addEventListener('click', function(e) {
         if (e.target === this) closeCCTV();
     });
@@ -527,17 +475,14 @@
 
             const marker = new google.maps.Marker({
                 position: { lat: cam.lat, lng: cam.lng },
-                map: (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
-                title: cam.name,
+                map:      (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
+                title:    cam.name,
                 icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                    url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
                     scaledSize: new google.maps.Size(40, 40),
-                    anchor: new google.maps.Point(20, 20)
+                    anchor:     new google.maps.Point(20, 20)
                 },
-                label: {
-                    text: cam.name,
-                    className: 'mlabel'
-                }
+                label: { text: cam.name, className: 'mlabel' }
             });
 
             marker.addListener('click', () => openCCTV(cam.name, cam.url));
@@ -564,32 +509,57 @@
         document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
     }, 1000);
 
-    // ─── SYNC FIRESTORE (ดึง ALL DATA) ────────────────────────────────────
+    // ─── SYNC FIRESTORE ────────────────────────────────────────────────────
+    // โครงสร้าง Firestore: หลาย docs ใน collection เดียว
+    // แต่ละ doc มี point_id เหมือนกัน และ timestamp ต่างกัน
     function syncFirestore(collectionName, type) {
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
             (snapshot) => {
                 log(`📦 ${collectionName}: ${snapshot.size} docs`);
+
+                // ── รวม docs ตาม point_id ──────────────────────────────
+                const historyMap = {};  // { point_id: [doc, doc, ...] }
+                const latestMap  = {};  // { point_id: doc }  ← timestamp ล่าสุดเท่านั้น
+
+                snapshot.forEach(doc => {
+                    const d   = doc.data();
+                    // ใช้ point_id เป็น key หลัก (fallback เป็น doc.id)
+                    const pid = String(d.point_id !== undefined ? d.point_id : doc.id);
+
+                    // เก็บทุก record สำหรับ chart
+                    if (!historyMap[pid]) historyMap[pid] = [];
+                    historyMap[pid].push(d);
+
+                    // เก็บ record ล่าสุด (timestamp มากสุด) สำหรับ marker
+                    const ts = parseFirestoreTimestamp(d.timestamp);
+                    const existingTs = latestMap[pid]
+                        ? parseFirestoreTimestamp(latestMap[pid].timestamp)
+                        : null;
+
+                    if (!existingTs || (ts && ts > existingTs)) {
+                        latestMap[pid] = d;
+                    }
+                });
+
+                // ── บันทึก history ทั้งหมด ─────────────────────────────
+                allHistoricalData[type] = historyMap;
+
+                // ── log สรุป ───────────────────────────────────────────
+                Object.entries(historyMap).forEach(([pid, records]) => {
+                    log(`   point_id:${pid} | ${records.length} records | latest: ${latestMap[pid]?.final_value}`);
+                });
+
+                // ── ลบ marker เก่า ─────────────────────────────────────
                 Object.values(markers[type]).forEach(m => m.setMap(null));
                 markers[type] = {};
-                allHistoricalData[type] = {}; // Reset historical data
-                
-                if (snapshot.empty) { log(`⚠️ ไม่มีข้อมูลใน ${collectionName}`); return; }
-                
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    log(`📌 ${doc.id} | lat:${d.latitude} lng:${d.longitude} val:${d.final_value} ts:${d.timestamp}`);
-                    
-                    // Store ALL data (including timestamp) for chart
-                    if (!allHistoricalData[type][doc.id]) {
-                        allHistoricalData[type][doc.id] = [];
-                    }
-                    allHistoricalData[type][doc.id].push(d);
-                    
-                    renderMarker(type, doc.id, d);
+
+                // ── render marker จาก latest doc ต่อ point ────────────
+                Object.entries(latestMap).forEach(([pid, d]) => {
+                    renderMarker(type, pid, d);
                 });
             },
-            (err) => log(`❌ Firestore: ${err.message}`)
+            (err) => log(`❌ Firestore error: ${err.message}`)
         );
     }
 
@@ -635,12 +605,12 @@
     }
 
     // ─── RENDER MARKER ────────────────────────────────────────────────────
-    function renderMarker(type, id, val) {
+    function renderMarker(type, pointId, val) {
         const lat = parseFloat(val.latitude);
         const lng = parseFloat(val.longitude);
         const cur = parseFloat(val.final_value) || 0;
 
-        if (isNaN(lat) || isNaN(lng)) { log(`⚠️ ${id}: lat/lng ผิด`); return; }
+        if (isNaN(lat) || isNaN(lng)) { log(`⚠️ point_id:${pointId}: lat/lng ผิด`); return; }
 
         const color = val.alert_color
             ? val.alert_color
@@ -659,7 +629,7 @@
         const marker = new google.maps.Marker({
             position:  { lat: lat + offset, lng: lng },
             map:       (currentFilter === 'all' || currentFilter === type) ? map : null,
-            title:     val.point_name || id,
+            title:     val.point_name || pointId,
             icon:      buildIcon(type, cur, color),
             label: {
                 text:      `${cur}${unit}`,
@@ -667,10 +637,7 @@
             }
         });
 
-        // Store data on marker for chart access
-        marker.markerData = { type, id, ...val };
-
-        const pointName   = val.point_name || id;
+        const pointName   = val.point_name || String(pointId);
         const infoContent = `
             <div style="font-family:'Kanit',sans-serif;padding:8px 12px;min-width:140px;background:#1e293b;border-radius:8px;border:1px solid ${color};color:white;">
                 <div style="font-size:13px;font-weight:700;color:${color};margin-bottom:4px;">${pointName}</div>
@@ -681,25 +648,23 @@
         const infoWindow = new google.maps.InfoWindow({ content: infoContent, disableAutoPan: true });
         marker.addListener('mouseover', () => infoWindow.open(map, marker));
         marker.addListener('mouseout',  () => infoWindow.close());
-        marker.addListener('click',     () => {
+        marker.addListener('click', () => {
             infoWindow.open(map, marker);
-            // Open chart on click
-            setTimeout(() => openChart(type, id, pointName, unit, color), 100);
+            // ส่ง pointId (= point_id) ให้ chart เพื่อดึง history ถูก key
+            setTimeout(() => openChart(type, String(pointId), pointName, unit, color), 100);
         });
 
-        markers[type][id] = marker;
+        markers[type][pointId] = marker;
     }
 
-    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────────────────
+    // ─── FILTER VIEW ──────────────────────────────────────────────────────
     window.updateView = (v) => {
         currentFilter = v;
-        // sensor markers
         ['water', 'air', 'rain'].forEach(t =>
             Object.values(markers[t]).forEach(m =>
                 m.setMap((v === 'all' || v === t) ? map : null)
             )
         );
-        // CCTV markers
         const showCCTV = (v === 'all' || v === 'cctv');
         cctvMarkers.forEach(m => m.setMap(showCCTV ? map : null));
     };
@@ -708,11 +673,11 @@
     window.initMap = function() {
         log("🗺️ Google Map พร้อม");
         map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 14,
+            zoom:   14,
             center: { lat: 13.9130, lng: 100.5515 },
             mapTypeControl: true,
             mapTypeControlOptions: {
-                style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                style:    google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
                 position: google.maps.ControlPosition.TOP_RIGHT
             }
         });
