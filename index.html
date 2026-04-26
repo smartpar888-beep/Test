@@ -308,6 +308,7 @@
     let currentFilter = 'all';
     let chartInstance = null;
     let currentChartData = null;
+    let allHistoricalData = { water: {}, air: {}, rain: {} }; // Store all data for filtering
 
     // ─── Chart Controls ───────────────────────────────────────────────────
     function openChart(type, id, pointName, unit, color) {
@@ -326,36 +327,42 @@
         }
     }
 
-    // Generate mock historical data (in real scenario, fetch from Firestore)
-    function generateMockHistoricalData(range, baseValue) {
-        const data = [];
-        const labels = [];
+    // Filter historical data by date range
+    function filterDataByRange(range, allData) {
         const now = new Date();
+        const filtered = [];
         let days = 30;
 
         if (range === 'week') days = 7;
         if (range === 'month') days = 30;
         if (range === 'year') days = 365;
 
-        for (let i = days - 1; i >= 0; i--) {
-            const date = new Date(now);
-            date.setDate(date.getDate() - i);
-            
-            const randomVariation = (Math.random() - 0.5) * 20;
-            const value = Math.max(0, baseValue + randomVariation);
-            
-            data.push(value);
-            
-            if (range === 'week') {
-                labels.push(date.toLocaleDateString('th-TH', { weekday: 'short' }));
-            } else if (range === 'month') {
-                labels.push(date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
-            } else {
-                labels.push(date.toLocaleDateString('th-TH', { month: 'short' }));
-            }
-        }
+        const startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - days);
 
-        return { labels, data };
+        // Filter data within the date range
+        allData.forEach(item => {
+            let itemDate;
+            
+            // Handle different timestamp formats
+            if (item.timestamp) {
+                if (item.timestamp.toDate) {
+                    itemDate = item.timestamp.toDate();
+                } else if (typeof item.timestamp === 'string') {
+                    itemDate = new Date(item.timestamp);
+                } else if (item.timestamp instanceof Date) {
+                    itemDate = item.timestamp;
+                }
+            }
+
+            if (itemDate && itemDate >= startDate && itemDate <= now) {
+                filtered.push({ date: itemDate, value: item.final_value });
+            }
+        });
+
+        // Sort by date
+        filtered.sort((a, b) => a.date - b.date);
+        return filtered;
     }
 
     function updateChart() {
@@ -363,12 +370,35 @@
 
         const range = document.getElementById('chart-range').value;
         const { type, id, pointName, unit, color } = currentChartData;
+
+        // Get all historical data for this point
+        const pointData = allHistoricalData[type][id] || [];
         
-        // Get current value from markers
-        const marker = markers[type][id];
-        const baseValue = marker ? (marker.markerData?.final_value || 50) : 50;
+        log(`📊 Found ${pointData.length} records for ${id}`);
+
+        // Filter by range
+        const filtered = filterDataByRange(range, pointData);
         
-        const { labels, data } = generateMockHistoricalData(range, baseValue);
+        log(`📊 Filtered to ${filtered.length} records for ${range}`);
+
+        // Prepare chart data
+        const labels = filtered.map(item => 
+            item.date.toLocaleDateString('th-TH', 
+                range === 'year' ? { month: 'short' } : { month: 'short', day: 'numeric' }
+            )
+        );
+        const data = filtered.map(item => parseFloat(item.value) || 0);
+
+        // If no data, show mock data
+        if (data.length === 0) {
+            log(`⚠️ ไม่มีข้อมูลสำหรับ ${range}`);
+            for (let i = range === 'week' ? 7 : range === 'month' ? 30 : 365; i > 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
+                data.push(50 + Math.random() * 20);
+            }
+        }
 
         const chartCanvas = document.getElementById('historical-chart');
         
@@ -437,7 +467,7 @@
         if (e.target === this) closeChart();
     });
 
-    // ─── CCTV Controls ───────────────────────────────────────���────────────
+    // ─── CCTV Controls ───────────────────────────────────────────────────
     function openCCTV(name, url) {
         document.getElementById('cctv-title').innerText = '📹 ' + name;
         const frame = document.getElementById('cctv-frame');
@@ -508,7 +538,7 @@
         document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
     }, 1000);
 
-    // ─── SYNC FIRESTORE ───────────────────────────────────────────────────
+    // ─── SYNC FIRESTORE (ดึง ALL DATA) ────────────────────────────────────
     function syncFirestore(collectionName, type) {
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
@@ -516,10 +546,20 @@
                 log(`📦 ${collectionName}: ${snapshot.size} docs`);
                 Object.values(markers[type]).forEach(m => m.setMap(null));
                 markers[type] = {};
+                allHistoricalData[type] = {}; // Reset historical data
+                
                 if (snapshot.empty) { log(`⚠️ ไม่มีข้อมูลใน ${collectionName}`); return; }
+                
                 snapshot.forEach(doc => {
                     const d = doc.data();
                     log(`📌 ${doc.id} | lat:${d.latitude} lng:${d.longitude} val:${d.final_value}`);
+                    
+                    // Store ALL data (including timestamp) for chart
+                    if (!allHistoricalData[type][doc.id]) {
+                        allHistoricalData[type][doc.id] = [];
+                    }
+                    allHistoricalData[type][doc.id].push(d);
+                    
                     renderMarker(type, doc.id, d);
                 });
             },
@@ -624,7 +664,7 @@
         markers[type][id] = marker;
     }
 
-    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────────────────
+    // ─── FILTER (รวม CCTV แล้ว) ───────────────────────────────���───────────
     window.updateView = (v) => {
         currentFilter = v;
         // sensor markers
@@ -638,7 +678,7 @@
         cctvMarkers.forEach(m => m.setMap(showCCTV ? map : null));
     };
 
-    // ─── INIT MAP ─────────────────────────────────────────────────────────
+    // ─── INIT MAP ──────────────────────────────────────────────────────────
     window.initMap = function() {
         log("🗺️ Google Map พร้อม");
         map = new google.maps.Map(document.getElementById("map"), {
