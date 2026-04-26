@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTT Smart Water Platform | Professional Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         :root {
             --bg-color: #0b1120;
@@ -65,6 +66,86 @@
             padding: 0 !important;
             margin-top: 2px !important;
         }
+
+        /* ── Data Chart Overlay (Pop-up) ── */
+        #chart-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        }
+        .chart-modal {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            position: relative;
+            width: 70vw;
+            max-width: 1000px;
+            height: 65vh;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .chart-modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .chart-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .chart-range-select {
+            background: #0f1729;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: 'Kanit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .chart-range-select:hover {
+            background: #151f32;
+        }
+        .chart-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-container canvas {
+            max-height: 100%;
+        }
+        .close-chart {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px; height: 32px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            z-index: 10002;
+        }
+        .close-chart:hover { background: #dc2626; }
 
         /* ── CCTV Overlay (Pop-up) ── */
         #cctv-overlay {
@@ -155,6 +236,26 @@
 
 <div id="map-area"><div id="map"></div></div>
 
+<!-- Data Chart Pop-up Overlay -->
+<div id="chart-overlay">
+    <div class="chart-modal">
+        <button class="close-chart" onclick="closeChart()">✕</button>
+        <div class="chart-modal-header">
+            <div class="chart-modal-title" id="chart-title">📊 ข้อมูลย้อนหลัง</div>
+            <div class="chart-controls">
+                <select id="chart-range" class="chart-range-select" onchange="updateChart()">
+                    <option value="week">สัปดาห์</option>
+                    <option value="month" selected>เดือน</option>
+                    <option value="year">ปี</option>
+                </select>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="historical-chart"></canvas>
+        </div>
+    </div>
+</div>
+
 <!-- CCTV Pop-up Overlay -->
 <div id="cctv-overlay">
     <div class="cctv-modal">
@@ -176,9 +277,9 @@
     // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] แก้ไข lat, lng และ url ─────────────
     const CCTV_LIST = [
             { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
-            { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.29' },
-            { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.1' },
-            { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/192.168.15.24' }
+            { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/bang13' },
+            { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/koh' },
+            { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/chuang' }
 
         /*
          💡 เพิ่มกล้องใหม่: คัดลอกบรรทัดข้างล่างแล้ววางต่อท้าย (อย่าลืมใส่ comma)
@@ -205,8 +306,138 @@
     let markers       = { water: {}, air: {}, rain: {} };
     let cctvMarkers   = [];
     let currentFilter = 'all';
+    let chartInstance = null;
+    let currentChartData = null;
 
-    // ─── CCTV Controls ────────────────────────────────────────────────────
+    // ─── Chart Controls ───────────────────────────────────────────────────
+    function openChart(type, id, pointName, unit, color) {
+        document.getElementById('chart-title').innerText = `📊 ${pointName}`;
+        currentChartData = { type, id, pointName, unit, color };
+        document.getElementById('chart-range').value = 'month';
+        document.getElementById('chart-overlay').style.display = 'flex';
+        updateChart();
+    }
+
+    function closeChart() {
+        document.getElementById('chart-overlay').style.display = 'none';
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
+    }
+
+    // Generate mock historical data (in real scenario, fetch from Firestore)
+    function generateMockHistoricalData(range, baseValue) {
+        const data = [];
+        const labels = [];
+        const now = new Date();
+        let days = 30;
+
+        if (range === 'week') days = 7;
+        if (range === 'month') days = 30;
+        if (range === 'year') days = 365;
+
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            
+            const randomVariation = (Math.random() - 0.5) * 20;
+            const value = Math.max(0, baseValue + randomVariation);
+            
+            data.push(value);
+            
+            if (range === 'week') {
+                labels.push(date.toLocaleDateString('th-TH', { weekday: 'short' }));
+            } else if (range === 'month') {
+                labels.push(date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }));
+            } else {
+                labels.push(date.toLocaleDateString('th-TH', { month: 'short' }));
+            }
+        }
+
+        return { labels, data };
+    }
+
+    function updateChart() {
+        if (!currentChartData) return;
+
+        const range = document.getElementById('chart-range').value;
+        const { type, id, pointName, unit, color } = currentChartData;
+        
+        // Get current value from markers
+        const marker = markers[type][id];
+        const baseValue = marker ? (marker.markerData?.final_value || 50) : 50;
+        
+        const { labels, data } = generateMockHistoricalData(range, baseValue);
+
+        const chartCanvas = document.getElementById('historical-chart');
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `${pointName} (${unit})`,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: '#94a3b8',
+                            font: { family: "'Kanit', sans-serif", size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#94a3b8',
+                        borderColor: color,
+                        borderWidth: 1,
+                        padding: 10,
+                        titleFont: { family: "'Kanit', sans-serif" },
+                        bodyFont: { family: "'Kanit', sans-serif" }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: "'Kanit', sans-serif" } },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // ปิด overlay เมื่อคลิก background
+    document.getElementById('chart-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeChart();
+    });
+
+    // ─── CCTV Controls ───────────────────────────────────────���────────────
     function openCCTV(name, url) {
         document.getElementById('cctv-title').innerText = '📹 ' + name;
         const frame = document.getElementById('cctv-frame');
@@ -270,7 +501,7 @@
         } catch(e) { document.getElementById('w-info').innerText = "Weather Error"; }
     }
 
-    // ─── CLOCK ────────────────────────────────────────────────────────────
+    // ─── CLOCK ───────────────────────────────────────────────────────────
     setInterval(() => {
         const n = new Date();
         document.getElementById('c-time').innerText = n.toLocaleTimeString('th-TH', { timeZone:'Asia/Bangkok', hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
@@ -370,6 +601,9 @@
             }
         });
 
+        // Store data on marker for chart access
+        marker.markerData = { type, id, ...val };
+
         const pointName   = val.point_name || id;
         const infoContent = `
             <div style="font-family:'Kanit',sans-serif;padding:8px 12px;min-width:140px;background:#1e293b;border-radius:8px;border:1px solid ${color};color:white;">
@@ -381,7 +615,11 @@
         const infoWindow = new google.maps.InfoWindow({ content: infoContent, disableAutoPan: true });
         marker.addListener('mouseover', () => infoWindow.open(map, marker));
         marker.addListener('mouseout',  () => infoWindow.close());
-        marker.addListener('click',     () => infoWindow.open(map, marker));
+        marker.addListener('click',     () => {
+            infoWindow.open(map, marker);
+            // Open chart on click
+            setTimeout(() => openChart(type, id, pointName, unit, color), 100);
+        });
 
         markers[type][id] = marker;
     }
@@ -428,4 +666,3 @@
 
 </body>
 </html>
-
