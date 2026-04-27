@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         :root {
-            --bg-primary: #f0f4f9;
+            --bg-primary: #e5e7eb;
             --bg-secondary: #ffffff;
             --panel-bg: #ffffff;
             --border-color: rgba(59, 130, 246, 0.1);
@@ -340,6 +340,149 @@
             box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
         }
 
+        /* ── Pump Status Pop-up ── */
+        #pump-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(59, 130, 246, 0.15);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+            backdrop-filter: blur(4px);
+        }
+
+        .pump-modal {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4f9 100%);
+            padding: 32px;
+            border-radius: 16px;
+            position: relative;
+            width: 400px;
+            box-shadow: 0 20px 50px rgba(59, 130, 246, 0.15);
+            border: 2px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .pump-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.12);
+        }
+
+        .pump-modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-blue);
+        }
+
+        .pump-status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .pump-status-badge.normal {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pump-status-badge.warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .pump-status-badge.critical {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(249, 115, 115, 0.1) 100%);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pump-info {
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.05);
+            border-left: 3px solid var(--color-blue);
+            border-radius: 4px;
+        }
+
+        .pump-info-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .pump-info-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .pump-info-value .unit {
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 8px;
+            opacity: 0.7;
+        }
+
+        .pump-stations-info {
+            background: rgba(59, 130, 246, 0.05);
+            padding: 14px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .pump-stations-count {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-blue);
+        }
+
+        .pump-stations-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .close-pump {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            z-index: 10002;
+            transition: all 0.3s ease;
+        }
+
+        .close-pump:hover {
+            transform: scale(1.12);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+
         /* ── CCTV toast notification ── */
         #cctv-toast {
             position: fixed;
@@ -406,6 +549,7 @@
                 <option value="air">2. อากาศ (AQI)</option>
                 <option value="rain">3. ปริมาณฝน (Rain)</option>
                 <option value="cctv">4. กล้อง CCTV</option>
+                <option value="pump">5. สถานีปั๊ม</option>
             </select>
         </div>
     </div>
@@ -433,6 +577,29 @@
     </div>
 </div>
 
+<!-- Pump Status Pop-up Overlay -->
+<div id="pump-overlay">
+    <div class="pump-modal">
+        <button class="close-pump" onclick="closePumpPopup()">✕</button>
+        <div class="pump-modal-header">
+            <div>💧</div>
+            <div class="pump-modal-title" id="pump-name">ชื่อปั๊ม</div>
+            <span class="pump-status-badge normal" id="pump-status">Normal</span>
+        </div>
+        <div class="pump-info">
+            <div class="pump-info-label">กำลังระบายน้ำสูงสุด</div>
+            <div class="pump-info-value">
+                <span id="pump-flow">0</span>
+                <span class="unit">ลบ.ม./วินาที</span>
+            </div>
+        </div>
+        <div class="pump-stations-info">
+            <div class="pump-stations-count" id="pump-total-count">14</div>
+            <div class="pump-stations-label">สถานีปั๊มทั้งหมด</div>
+        </div>
+    </div>
+</div>
+
 <!-- CCTV Toast -->
 <div id="cctv-toast">📹 <span id="cctv-toast-name"></span> — กำลังเปิดหน้าต่างใหม่...</div>
 
@@ -448,12 +615,32 @@
     // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] ─────────────────────────────────────
     const CCTV_LIST = [
         { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
-        { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam01' },
-        { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam02' },
-        { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctvImg/cam03' },
+        { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctv2' },
+        { id: 'cam3', name: 'คลองบางพูด เกาะพญาเจ่ง', lat: 13.91058624286773, lng: 100.51841664226215, url: 'https://www.pakkretconnect.com/liffwater/cctv3' },
+        { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctv4' },
     ];
 
-    // ─── Firebase & Weather Config ────────────────────────────────────────
+    // ─── 🚩 [กำหนดข้อมูล PUMP STATIONS ที่นี่] ──────────────────────────────
+    // ⚠️ เพิ่มสถานี: คัดลอก object ใต้ นี้ แล้วใส่ lat, lng เอง
+    // status: 'normal' (green), 'warning' (yellow), 'critical' (red)
+    const PUMP_LIST = [
+        { id: 'pump1', name: 'ปั๊มสถานี 1 - ปากเกร็ด', lat: 13.9100, lng: 100.4950, flow: 45, status: 'normal' },
+        { id: 'pump2', name: 'ปั๊มสถานี 2 - บางพูด', lat: 13.9120, lng: 100.5050, flow: 52, status: 'normal' },
+        { id: 'pump3', name: 'ปั๊มสถานี 3 - เกาะพญาเจ่ง', lat: 13.9105, lng: 100.5180, flow: 38, status: 'normal' },
+        { id: 'pump4', name: 'ปั๊มสถานี 4 - เชื่องคลองส่วย', lat: 13.9070, lng: 100.5430, flow: 61, status: 'normal' },
+        { id: 'pump5', name: 'ปั๊มสถานี 5', lat: 13.9200, lng: 100.4850, flow: 48, status: 'normal' },
+        { id: 'pump6', name: 'ปั๊มสถานี 6', lat: 13.9150, lng: 100.5350, flow: 55, status: 'normal' },
+        { id: 'pump7', name: 'ปั๊มสถานี 7', lat: 13.9250, lng: 100.5200, flow: 42, status: 'normal' },
+        { id: 'pump8', name: 'ปั๊มสถานี 8', lat: 13.8950, lng: 100.5000, flow: 58, status: 'normal' },
+        { id: 'pump9', name: 'ปั๊มสถานี 9', lat: 13.9180, lng: 100.4900, flow: 47, status: 'normal' },
+        { id: 'pump10', name: 'ปั๊มสถานี 10', lat: 13.9220, lng: 100.5300, flow: 51, status: 'normal' },
+        { id: 'pump11', name: 'ปั๊มสถานี 11', lat: 13.9080, lng: 100.4800, flow: 44, status: 'normal' },
+        { id: 'pump12', name: 'ปั๊มสถานี 12', lat: 13.9320, lng: 100.5150, flow: 59, status: 'normal' },
+        { id: 'pump13', name: 'ปั๊มสถานี 13', lat: 13.9050, lng: 100.5450, flow: 39, status: 'normal' },
+        { id: 'pump14', name: 'ปั๊มสถานี 14', lat: 13.9280, lng: 100.4950, flow: 53, status: 'normal' },
+    ];
+
+    // Firebase & Weather Config
     const FB_CONFIG = {
         apiKey:            "AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY",
         authDomain:        "city-prototype.firebaseapp.com",
@@ -469,12 +656,12 @@
     const db = firebase.firestore();
 
     let map;
-    let markers           = { water: {}, air: {}, rain: {} };
+    let markers           = { water: {}, air: {}, rain: {}, pump: {} };
     let cctvMarkers       = [];
+    let pumpMarkers       = [];
     let currentFilter     = 'all';
     let chartInstance     = null;
     let currentChartData  = null;
-    // allHistoricalData[type][point_id] = [ ...all docs for that point ]
     let allHistoricalData = { water: {}, air: {}, rain: {} };
 
     // ─── Helper: Convert Firestore Timestamp → JS Date ───────────────────
@@ -499,6 +686,25 @@
     function closeChart() {
         document.getElementById('chart-overlay').style.display = 'none';
         if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    }
+
+    // ─── Pump Status Pop-up Controls ───────────────────────────────────────
+    function openPumpPopup(pump) {
+        document.getElementById('pump-name').innerText = pump.name;
+        document.getElementById('pump-flow').innerText = pump.flow;
+        document.getElementById('pump-total-count').innerText = PUMP_LIST.length;
+
+        const statusEl = document.getElementById('pump-status');
+        statusEl.className = 'pump-status-badge ' + pump.status;
+        
+        const statusText = pump.status === 'normal' ? 'ปกติ' : pump.status === 'warning' ? 'เตือน' : 'วิกฤต';
+        statusEl.innerText = statusText;
+
+        document.getElementById('pump-overlay').style.display = 'flex';
+    }
+
+    function closePumpPopup() {
+        document.getElementById('pump-overlay').style.display = 'none';
     }
 
     // ─── Filter historical data by date range ────────────────────────────
@@ -530,7 +736,6 @@
         const range                          = document.getElementById('chart-range').value;
         const { type, pointId, pointName, unit, color } = currentChartData;
 
-        // ── ดึง historical data โดยใช้ point_id เป็น key ──
         const pointData = allHistoricalData[type][pointId] || [];
         log(`📊 records ทั้งหมดของ point ${pointId}: ${pointData.length}`);
 
@@ -545,7 +750,6 @@
         );
         const data = filtered.map(item => item.value);
 
-        // ถ้าไม่มีข้อมูลจริง แสดง mock เพื่อ debug
         if (data.length === 0) {
             log(`⚠️ ไม่มีข้อมูลใน range นี้ — แสดง mock data`);
             const dayCount = range === 'week' ? 7 : range === 'month' ? 30 : 365;
@@ -622,9 +826,11 @@
         if (e.target === this) closeChart();
     });
 
+    document.getElementById('pump-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closePumpPopup();
+    });
+
     // ─── CCTV Controls ────────────────────────────────────────────────────
-    // เว็บ CCTV ปลายทาง detect iframe แล้ว redirect ไปหน้า error (server-side)
-    // แก้โดยเปิด window.open() แทน — browser เห็นเป็น direct navigation ปกติ
     function openCCTV(name, url) {
         const w    = Math.round(window.screen.width  * 0.75);
         const h    = Math.round(window.screen.height * 0.75);
@@ -633,7 +839,6 @@
         window.open(url, 'cctv_' + name,
             `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
         );
-        // แสดง toast แจ้งผู้ใช้
         const toast = document.getElementById('cctv-toast');
         document.getElementById('cctv-toast-name').innerText = name;
         toast.classList.add('show');
@@ -668,7 +873,42 @@
         log(`📹 CCTV markers: ${CCTV_LIST.length} จุด`);
     }
 
-    // ─── WEATHER ──────────────────────────────────────────────────────────
+    // ─── PUMP Markers ─────────────────────────────────────────────────────
+    function initPumpMarkers() {
+        PUMP_LIST.forEach(pump => {
+            const colorMap = {
+                'normal': '#10b981',
+                'warning': '#f59e0b',
+                'critical': '#ef4444'
+            };
+            const color = colorMap[pump.status] || '#10b981';
+
+            const svgIcon = `<svg width="44" height="60" viewBox="0 0 44 60" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(59, 130, 246, 0.15)"/>
+                <path d="M 12 25 L 10 35 Q 10 42 22 45 Q 34 42 34 35 L 32 25 Q 32 18 22 18 Q 12 18 12 25Z" fill="${color}" opacity="0.9" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                <circle cx="22" cy="30" r="4" fill="rgba(255,255,255,0.8)"/>
+                <line x1="22" y1="10" x2="22" y2="18" stroke="${color}" stroke-width="2"/>
+            </svg>`;
+
+            const marker = new google.maps.Marker({
+                position: { lat: pump.lat, lng: pump.lng },
+                map:      (currentFilter === 'all' || currentFilter === 'pump') ? map : null,
+                title:    pump.name,
+                icon: {
+                    url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                    scaledSize: new google.maps.Size(44, 60),
+                    anchor:     new google.maps.Point(22, 58)
+                },
+                label: { text: pump.name, className: 'mlabel' }
+            });
+
+            marker.addListener('click', () => openPumpPopup(pump));
+            pumpMarkers.push(marker);
+        });
+        log(`💧 Pump markers: ${PUMP_LIST.length} สถานี`);
+    }
+
+    // ─── WEATHER ────────────────────────────────────────────────────────
     async function fetchWeather() {
         try {
             const res  = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHER_KEY}&q=13.9130,100.5515&days=1&lang=th`);
@@ -687,28 +927,22 @@
     }, 1000);
 
     // ─── SYNC FIRESTORE ────────────────────────────────────────────────────
-    // โครงสร้าง Firestore: หลาย docs ใน collection เดียว
-    // แต่ละ doc มี point_id เหมือนกัน และ timestamp ต่างกัน
     function syncFirestore(collectionName, type) {
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
             (snapshot) => {
                 log(`📦 ${collectionName}: ${snapshot.size} docs`);
 
-                // ── รวม docs ตาม point_id ──────────────────────────────
-                const historyMap = {};  // { point_id: [doc, doc, ...] }
-                const latestMap  = {};  // { point_id: doc }  ← timestamp ล่าสุดเท่านั้น
+                const historyMap = {};
+                const latestMap  = {};
 
                 snapshot.forEach(doc => {
                     const d   = doc.data();
-                    // ใช้ point_id เป็น key หลัก (fallback เป็น doc.id)
                     const pid = String(d.point_id !== undefined ? d.point_id : doc.id);
 
-                    // เก็บทุก record สำหรับ chart
                     if (!historyMap[pid]) historyMap[pid] = [];
                     historyMap[pid].push(d);
 
-                    // เก็บ record ล่าสุด (timestamp มากสุด) สำหรับ marker
                     const ts = parseFirestoreTimestamp(d.timestamp);
                     const existingTs = latestMap[pid]
                         ? parseFirestoreTimestamp(latestMap[pid].timestamp)
@@ -719,19 +953,15 @@
                     }
                 });
 
-                // ── บันทึก history ทั้งหมด ─────────────────────────────
                 allHistoricalData[type] = historyMap;
 
-                // ── log สรุป ───────────────────────────────────────────
                 Object.entries(historyMap).forEach(([pid, records]) => {
                     log(`   point_id:${pid} | ${records.length} records | latest: ${latestMap[pid]?.final_value}`);
                 });
 
-                // ── ลบ marker เก่า ─────────────────────────────────────
                 Object.values(markers[type]).forEach(m => m.setMap(null));
                 markers[type] = {};
 
-                // ── render marker จาก latest doc ต่อ point ────────────
                 Object.entries(latestMap).forEach(([pid, d]) => {
                     renderMarker(type, pid, d);
                 });
@@ -816,7 +1046,7 @@
 
         const pointName   = val.point_name || String(pointId);
         const infoContent = `
-            <div style="font-family:'Kanit',sans-serif;padding:14px 18px;min-width:180px;background:linear-gradient(135deg, #ffffff 0%, #f0f4f9 100%);border-radius:12px;border:2px solid ${color};color:#1e293b;box-shadow:0 6px 16px rgba(59, 130, 246, 0.15);">
+            <div style="font-family:'Kanit',sans-serif;padding:14px 18px;min-width:180px;background:linear-gradient(135deg, #ffffff 0%, #f0f4f9 100%);border-radius:12px;border:2px solid ${color};box-shadow:0 4px 12px rgba(0,0,0,0.1);">
                 <div style="font-size:14px;font-weight:700;color:${color};margin-bottom:8px;">${pointName}</div>
                 <div style="font-size:28px;font-weight:700;color:#1e293b;">${cur} <span style="font-size:14px;opacity:0.7;font-weight:500;">${unit}</span></div>
                 <div style="font-size:11px;opacity:0.6;margin-top:8px;color:#64748b;">lat: ${lat.toFixed(5)}, lng: ${lng.toFixed(5)}</div>
@@ -827,7 +1057,6 @@
         marker.addListener('mouseout',  () => infoWindow.close());
         marker.addListener('click', () => {
             infoWindow.open(map, marker);
-            // ส่ง pointId (= point_id) ให้ chart เพื่อดึง history ถูก key
             setTimeout(() => openChart(type, String(pointId), pointName, unit, color), 100);
         });
 
@@ -844,9 +1073,12 @@
         );
         const showCCTV = (v === 'all' || v === 'cctv');
         cctvMarkers.forEach(m => m.setMap(showCCTV ? map : null));
+        
+        const showPump = (v === 'all' || v === 'pump');
+        pumpMarkers.forEach(m => m.setMap(showPump ? map : null));
     };
 
-    // ─── INIT MAP ──────────────────────────────────────────────────────────
+    // ─── INIT MAP ────────────────────────────────────────────────────────
     window.initMap = function() {
         log("🗺️ Google Map พร้อม");
         map = new google.maps.Map(document.getElementById("map"), {
@@ -859,6 +1091,7 @@
             }
         });
         initCCTVMarkers();
+        initPumpMarkers();
         syncFirestore('water_monitoring', 'water');
         syncFirestore('air_monitoring',   'air');
         syncFirestore('rain_monitoring',  'rain');
