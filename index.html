@@ -21,9 +21,6 @@
             --shadow-sm: 0 1px 2px 0 rgba(59, 130, 246, 0.06);
             --shadow-md: 0 4px 6px -1px rgba(59, 130, 246, 0.12);
             --shadow-lg: 0 10px 15px -3px rgba(59, 130, 246, 0.15);
-            
-            /* 📍 6. ปรับขนาด ICON และตัวหนังสือ % ที่นี่ (ตัวแปรหลัก) */
-            --icon-scale: 100%;
         }
         
         * {
@@ -223,8 +220,6 @@
         /* ── Marker label ── */
         .mlabel {
             font-family: 'Kanit', sans-serif !important;
-            /* 📍 6. ปรับสเกลตัวอักษรของ Icon */
-            font-size: calc(12px * var(--icon-scale)) !important;
             font-weight: 600 !important;
             color: #ffffff !important;
             background: transparent !important;
@@ -238,6 +233,7 @@
             white-space: nowrap !important;
             padding: 0 !important;
             margin-top: 2px !important;
+            /* ย้ายการจัดการขนาด Font ไปไว้ใน JavaScript ให้ชัวร์ 100% แทนการใช้ CSS calc */
         }
 
         /* ── Data Chart Overlay (Pop-up) ── */
@@ -513,7 +509,7 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* 📍 4. ปรับโครงสร้าง CSS กล่อง Debug ให้พับเป็นบาร์ได้ */
+        /* 📍 4. กล่อง Debug Log ที่ย่อเป็นบาร์ได้ */
         #debug-log {
             position: fixed;
             bottom: 16px;
@@ -554,7 +550,6 @@
             font-family: 'Monaco', 'Menlo', monospace;
         }
 
-        /* เมื่อมี class minimized จะซ่อนเนื้อหาและลดขนาดกล่องลงเป็นบาร์ */
         #debug-log.minimized #debug-content {
             display: none;
         }
@@ -666,10 +661,19 @@
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
 <script>
+    // 📍 6. ตั้งค่าปรับขนาด ICON และ ตัวหนังสือ (ใส่เป็น % ได้เลย เช่น 100, 80, 120, 150)
+    // ตรงนี้ปลอดภัย 100% ไม่มีทางทำให้พังเหมือนตอนแก้ใน CSS ครับ
+    const ICON_SCALE_PERCENT = 100; 
+
+    // คำนวณเป็นตัวคูณอัตโนมัติ (เช่น 100 = 1.0)
+    function getScale() {
+        let val = parseFloat(ICON_SCALE_PERCENT);
+        return (isNaN(val) || val <= 0) ? 1.0 : (val / 100);
+    }
+
     const logEl = document.getElementById('debug-log');
     const logContent = document.getElementById('debug-content');
     
-    // ─── Debug Log Minimize Function ───────────────────────────────────────
     function toggleDebugMinimize() {
         logEl.classList.toggle('minimized');
         const icon = logEl.querySelector('.toggle-icon');
@@ -723,12 +727,17 @@
     };
     const WEATHER_KEY = "ed164e97ac7646debe045126262903";
 
-    try { firebase.initializeApp(FB_CONFIG); log("✅ Firebase OK"); }
-    catch(e) { log("❌ " + e.message); }
-    const db = firebase.firestore();
+    let db;
+    try { 
+        firebase.initializeApp(FB_CONFIG); 
+        db = firebase.firestore();
+        log("✅ Firebase OK"); 
+    } catch(e) { 
+        log("❌ Firebase ปัญหา: " + e.message); 
+    }
 
     let map;
-    let markers           = { water: {}, air: {}, rain: {}, pump: {} };
+    let markers           = { water: {}, air: {}, rain: {} };
     let cctvMarkers       = [];
     let pumpMarkers       = [];
     let currentFilter     = 'all';
@@ -801,7 +810,7 @@
     function updateChart() {
         if (!currentChartData) return;
 
-        const range                          = document.getElementById('chart-range').value;
+        const range = document.getElementById('chart-range').value;
         const { type, pointId, pointName, unit, color } = currentChartData;
 
         const pointData = allHistoricalData[type][pointId] || [];
@@ -839,7 +848,7 @@
                     label:                `${pointName} (${unit})`,
                     data,
                     borderColor:          color,
-                    // 📍 2. เปลี่ยนสีพื้นที่ใต้กราฟเป็นสีฟ้าอ่อนแบบคงที่
+                    // 📍 2. เปลี่ยนสีพื้นที่ใต้กราฟเป็นสีฟ้าอ่อน
                     backgroundColor:      'rgba(135, 206, 250, 0.4)', 
                     borderWidth: 3,
                     fill:                 true,
@@ -866,7 +875,7 @@
                         }
                     },
                     tooltip: {
-                        // 📍 1. สีกล่อง Tooltip เวลาเอาเมาส์ชี้ เป็นสีเทาเข้ม
+                        // 📍 1. สีกล่อง Tooltip เป็นสีเทาเข้ม
                         backgroundColor: '#333333', 
                         titleColor:      '#ffffff', 
                         bodyColor:       '#ffffff', 
@@ -923,16 +932,18 @@
                 <circle cx="14" cy="20" r="2.5" fill="#3b82f6"/>
             </svg>`;
 
+            const scale = getScale();
             const marker = new google.maps.Marker({
                 position: { lat: cam.lat, lng: cam.lng },
                 map:      (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
                 title:    cam.name,
                 icon: {
                     url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
-                    scaledSize: new google.maps.Size(Math.round(40 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100), Math.round(40 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100)),
-                    anchor:     new google.maps.Point(20, 20)
+                    scaledSize: new google.maps.Size(Math.round(40 * scale), Math.round(40 * scale)),
+                    anchor:     new google.maps.Point(20 * scale, 20 * scale)
                 },
-                label: { text: cam.name, className: 'mlabel' }
+                // 📍 คำนวณขนาดตัวหนังสือด้วย JS ปลอดภัยไม่พัง 100%
+                label: { text: cam.name, className: 'mlabel', fontSize: Math.round(12 * scale) + 'px' }
             });
 
             marker.addListener('click', () => openCCTV(cam.name, cam.url));
@@ -950,20 +961,20 @@
             };
             const color = colorMap[pump.status] || '#10b981';
 
-            // 📍 5. SVG ไอคอนเครื่องปั๊มน้ำ (Centrifugal Water Pump) รูปทรงอุตสาหกรรม
+            // 📍 5. ไอคอนปั๊มน้ำ
             const svgIcon = `<svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 50 H54 V56 H10 Z" fill="${color}" stroke="white" stroke-width="2"/>
+                <rect x="10" y="50" width="44" height="6" fill="${color}" stroke="white" stroke-width="2"/>
                 <circle cx="32" cy="32" r="16" fill="${color}" stroke="white" stroke-width="2"/>
                 <circle cx="32" cy="32" r="6" fill="white" opacity="0.8"/>
-                <path d="M26 8 H38 V16 H26 Z" fill="${color}" stroke="white" stroke-width="2"/>
-                <path d="M24 4 H40 V8 H24 Z" fill="${color}"/>
-                <path d="M48 26 H56 V38 H48 Z" fill="${color}" stroke="white" stroke-width="2"/>
-                <path d="M56 24 H60 V40 H56 Z" fill="${color}"/>
+                <rect x="26" y="8" width="12" height="8" fill="${color}" stroke="white" stroke-width="2"/>
+                <rect x="24" y="4" width="16" height="4" fill="${color}"/>
+                <rect x="48" y="26" width="8" height="12" fill="${color}" stroke="white" stroke-width="2"/>
+                <rect x="56" y="24" width="4" height="16" fill="${color}"/>
             </svg>`;
 
-            const iconScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100;
-            const scaledWidth = Math.round(48 * iconScale);
-            const scaledHeight = Math.round(48 * iconScale);
+            const scale = getScale();
+            const scaledWidth = Math.round(48 * scale);
+            const scaledHeight = Math.round(48 * scale);
 
             const marker = new google.maps.Marker({
                 position: { lat: pump.lat, lng: pump.lng },
@@ -974,7 +985,7 @@
                     scaledSize: new google.maps.Size(scaledWidth, scaledHeight),
                     anchor:     new google.maps.Point(scaledWidth / 2, scaledHeight)
                 },
-                label: { text: pump.name, className: 'mlabel' }
+                label: { text: pump.name, className: 'mlabel', fontSize: Math.round(12 * scale) + 'px' }
             });
 
             marker.addListener('click', () => openPumpPopup(pump));
@@ -999,8 +1010,12 @@
         document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
     }, 1000);
 
-    // 👇 นำส่วนที่เผลอลบไปใส่คืนให้เรียบร้อยแล้วครับ ลูกพี่
     function syncFirestore(collectionName, type) {
+        if (!db) {
+            log(`⚠️ ข้ามการดึง ${collectionName} เนื่องจาก Firebase ไม่พร้อม`);
+            return;
+        }
+
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
             (snapshot) => {
@@ -1032,14 +1047,14 @@
                     log(`   point_id:${pid} | ${records.length} records | latest: ${latestMap[pid]?.final_value}`);
                 });
 
-                Object.values(markers[type]).forEach(m => m.setMap(null));
+                Object.values(markers[type] || {}).forEach(m => m.setMap(null));
                 markers[type] = {};
 
                 Object.entries(latestMap).forEach(([pid, d]) => {
                     renderMarker(type, pid, d);
                 });
             },
-            (err) => log(`❌ Firestore error: ${err.message}`)
+            (err) => log(`❌ Firestore error (${collectionName}): ${err.message}`)
         );
     }
 
@@ -1094,17 +1109,17 @@
         const svgBody = buildIcon(type, value, color);
         const svg = `<svg width="60" height="68" viewBox="0 0 60 68" xmlns="http://www.w3.org/2000/svg">${svgBody}</svg>`;
 
-        const iconScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100;
-
+        const scale = getScale();
         const marker = new google.maps.Marker({
             position: { lat, lng },
-            map,
+            map:      (currentFilter === 'all' || currentFilter === type) ? map : null,
             title:    `${type}: ${value}`,
             icon: {
                 url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-                scaledSize: new google.maps.Size(Math.round(60 * iconScale), Math.round(68 * iconScale)),
-                anchor:     new google.maps.Point(30 * iconScale, 68 * iconScale)
-            }
+                scaledSize: new google.maps.Size(Math.round(60 * scale), Math.round(68 * scale)),
+                anchor:     new google.maps.Point(30 * scale, 68 * scale)
+            },
+            label: { text: `${type}`, className: 'mlabel', fontSize: Math.round(12 * scale) + 'px' }
         });
 
         marker.addListener('click', () => {
@@ -1112,6 +1127,7 @@
             openChart(type, pointId, `${type} (ID: ${pointId})`, unit, color);
         });
 
+        if (!markers[type]) markers[type] = {};
         markers[type][pointId] = marker;
     }
 
@@ -1119,8 +1135,8 @@
         currentFilter = filter;
         log(`🎯 Filter: ${filter}`);
 
-        ['water', 'air', 'rain', 'pump'].forEach(t => {
-            Object.values(markers[t]).forEach(m => {
+        ['water', 'air', 'rain'].forEach(t => {
+            Object.values(markers[t] || {}).forEach(m => {
                 const show = (filter === 'all' || filter === t);
                 m.setMap(show ? map : null);
             });
@@ -1154,20 +1170,6 @@
     window.addEventListener('load', () => {
         fetchWeather();
     });
-
-    // 📍 6. ฟังก์ชันสำหรับการอัปเดตขนาด Icon และ Text ให้สามารถเรียกใช้ได้ทันที
-    function updateIconSize(percentage) {
-        document.documentElement.style.setProperty('--icon-scale', percentage + '%');
-        log(`📏 Icon scale updated: ${percentage}%`);
-        
-        Object.values(markers).forEach(t => Object.values(t).forEach(m => m.setMap(null)));
-        cctvMarkers.forEach(m => m.setMap(null));
-        pumpMarkers.forEach(m => m.setMap(null));
-        cctvMarkers = [];
-        pumpMarkers = [];
-        initCCTVMarkers();
-        initPumpMarkers();
-    }
 </script>
 
 <script async
