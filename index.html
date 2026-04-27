@@ -1168,28 +1168,6 @@
         fetchWeather();
         initMap();
     });
-
-    // ─── UPDATE ICON SIZES FUNCTION ───────────────────────────────────────
-    function updateIconSize(percentage) {
-        document.documentElement.style.setProperty('--icon-scale', percentage + '%');
-        log(`📏 Icon scale: ${percentage}%`);
-        // ลบ marker เก่าแล้วสร้างใหม่
-        Object.values(markers).forEach(t => Object.values(t).forEach(m => m.setMap(null)));
-        cctvMarkers.forEach(m => m.setMap(null));
-        pumpMarkers.forEach(m => m.setMap(null));
-        cctvMarkers = [];
-        pumpMarkers = [];
-        initCCTVMarkers();
-        initPumpMarkers();
-    }
-
-</script>
-
-<!-- ❗ เพิ่มปุ่มทดสอบปรับขนาด ICON (ลบทิ้งได้หลังจากใช้งานจริง) -->
-<script>
-    // ตัวอย่างการใช้ updateIconSize
-    // updateIconSize(80); // ลดให้เหลือ 80%
-    // updateIconSize(120); // เพิ่มให้เป็น 120%
 </script>
 
 </body>
