@@ -999,6 +999,7 @@
         document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
     }, 1000);
 
+    // 👇 นำส่วนที่เผลอลบไปใส่คืนให้เรียบร้อยแล้วครับ ลูกพี่
     function syncFirestore(collectionName, type) {
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
@@ -1026,6 +1027,10 @@
                 });
 
                 allHistoricalData[type] = historyMap;
+
+                Object.entries(historyMap).forEach(([pid, records]) => {
+                    log(`   point_id:${pid} | ${records.length} records | latest: ${latestMap[pid]?.final_value}`);
+                });
 
                 Object.values(markers[type]).forEach(m => m.setMap(null));
                 markers[type] = {};
