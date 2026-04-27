@@ -6,6 +6,7 @@
     <title>MTT Smart Water Platform | Professional Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY"></script>
     <style>
         :root {
             --bg-primary: #e5e7eb;
@@ -21,19 +22,14 @@
             --shadow-sm: 0 1px 2px 0 rgba(59, 130, 246, 0.06);
             --shadow-md: 0 4px 6px -1px rgba(59, 130, 246, 0.12);
             --shadow-lg: 0 10px 15px -3px rgba(59, 130, 246, 0.15);
-            
-            /* ❗ ปรับ ICON SIZE % ที่นี่ ❗ */
             --icon-scale: 100%;
         }
         
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         
         body {
             font-family: 'Kanit', sans-serif;
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background-color: var(--bg-primary);
             color: var(--text-main);
             height: 100vh;
@@ -220,7 +216,6 @@
             height: 100%;
         }
 
-        /* ── Marker label ── */
         .mlabel {
             font-family: 'Kanit', sans-serif !important;
             font-size: calc(12px * var(--icon-scale)) !important;
@@ -239,11 +234,9 @@
             margin-top: 2px !important;
         }
 
-        /* ── Data Chart Overlay (Pop-up) ── */
         #chart-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 100%;
             height: 100%;
             background: rgba(59, 130, 246, 0.15);
@@ -343,11 +336,9 @@
             box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
         }
 
-        /* ── Pump Status Pop-up ── */
         #pump-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 100%;
             height: 100%;
             background: rgba(59, 130, 246, 0.15);
@@ -486,7 +477,6 @@
             box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
         }
 
-        /* ── CCTV toast notification ── */
         #cctv-toast {
             position: fixed;
             bottom: 32px;
@@ -529,6 +519,7 @@
             border: 1.5px solid rgba(59, 130, 246, 0.15);
             box-shadow: var(--shadow-md);
             transition: all 0.3s ease;
+            position: relative;
         }
 
         #debug-log.minimized {
@@ -580,9 +571,7 @@
         <div id="red-block" class="header-btn">
             <span id="c-date">--/--/--</span>&nbsp;|&nbsp;<span id="c-time">00:00:00</span>
         </div>
-        <!-- ❗ [แปะลิงค์หน้าสรุป 1 ที่นี่] -->
         <a href="#" id="purple-block" class="header-btn">หน้าสรุป 1</a>
-        <!-- ❗ [แปะลิงค์หน้าสรุป 2 ที่นี่] -->
         <a href="#" id="yellow-block" class="header-btn">หน้าสรุป 2</a>
         <div id="pink-block" class="header-btn">
             <select id="map-filter" onchange="updateView(this.value)">
@@ -599,7 +588,6 @@
 
 <div id="map-area"><div id="map"></div></div>
 
-<!-- Data Chart Pop-up Overlay -->
 <div id="chart-overlay">
     <div class="chart-modal">
         <button class="close-chart" onclick="closeChart()">✕</button>
@@ -619,7 +607,6 @@
     </div>
 </div>
 
-<!-- Pump Status Pop-up Overlay -->
 <div id="pump-overlay">
     <div class="pump-modal">
         <button class="close-pump" onclick="closePumpPopup()">✕</button>
@@ -642,10 +629,8 @@
     </div>
 </div>
 
-<!-- CCTV Toast -->
 <div id="cctv-toast">📹 <span id="cctv-toast-name"></span> — กำลังเปิดหน้าต่างใหม่...</div>
 
-<!-- Debug Log Box -->
 <div id="debug-log">
     🔌 กำลังเริ่มต้น...
     <button class="debug-minimize-btn" onclick="toggleDebugMinimize()">−</button>
@@ -657,21 +642,21 @@
 <script>
     const logEl = document.getElementById('debug-log');
     
-    // ─── Debug Log Minimize Function ───────────────────────────────────────
     function toggleDebugMinimize() {
         logEl.classList.toggle('minimized');
     }
 
     function log(msg) { 
         console.log(msg); 
-        logEl.innerHTML = logEl.innerHTML.replace('🔌 กำลังเริ่มต้น...', '');
+        if (logEl.innerHTML.includes('🔌 กำลังเริ่มต้น...')) {
+            logEl.innerHTML = '';
+        }
         logEl.innerHTML += '<br>' + msg; 
         if (!logEl.classList.contains('minimized')) {
             logEl.scrollTop = logEl.scrollHeight;
         }
     }
 
-    // ─── 🚩 [กำหนดข้อมูล CCTV ที่นี่] ─────────────────────────────────────
     const CCTV_LIST = [
         { id: 'cam1', name: 'ท่าน้ำปากเกร็ด', lat: 13.915175749831878, lng: 100.49444034136957, url: 'https://www.pakkretconnect.com/liffwater/eon' },
         { id: 'cam2', name: 'คลองบางพูด ประตูน้ำปากเกร็ด 13', lat: 13.925051545362829, lng: 100.50061836537286, url: 'https://www.pakkretconnect.com/liffwater/cctv2' },
@@ -679,9 +664,6 @@
         { id: 'cam4', name: 'คลองบางพูด เชื่องคลองส่วย', lat: 13.90731385376002, lng: 100.54338309204739, url: 'https://www.pakkretconnect.com/liffwater/cctv4' },
     ];
 
-    // ─── 🚩 [กำหนดข้อมูล PUMP STATIONS ที่นี่] ──────────────────────────────
-    // ⚠️ เพิ่มสถานี: คัดลอก object ใต้ นี้ แล้วใส่ lat, lng เอง
-    // status: 'normal' (green), 'warning' (yellow), 'critical' (red)
     const PUMP_LIST = [
         { id: 'pump1', name: 'Pumping Station 2', lat: 13.917655968170465, lng: 100.54319371102274, flow: 0.45, status: 'normal' },
         { id: 'pump2', name: 'Pumping Station 3', lat: 13.919463425556629, lng: 100.55217980207955, flow: 0.45, status: 'normal' },
@@ -703,14 +685,13 @@
         { id: 'pump18', name: 'Pumping Station C7', lat: 13.909129283580471, lng: 100.55362334195549, flow: 0.060, status: 'normal' },
     ];
 
-    // Firebase & Weather Config
     const FB_CONFIG = {
-        apiKey:            "AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY",
-        authDomain:        "city-prototype.firebaseapp.com",
-        projectId:         "city-prototype",
-        storageBucket:     "city-prototype.firebasestorage.app",
+        apiKey: "AIzaSyDFGlYDg8n7jJMOehSriF4o1rZM1aHR2uY",
+        authDomain: "city-prototype.firebaseapp.com",
+        projectId: "city-prototype",
+        storageBucket: "city-prototype.firebasestorage.app",
         messagingSenderId: "587922189632",
-        appId:             "1:587922189632:web:e13e821623b81209465ea5"
+        appId: "1:587922189632:web:e13e821623b81209465ea5"
     };
     const WEATHER_KEY = "ed164e97ac7646debe045126262903";
 
@@ -719,15 +700,14 @@
     const db = firebase.firestore();
 
     let map;
-    let markers           = { water: {}, air: {}, rain: {}, pump: {} };
-    let cctvMarkers       = [];
-    let pumpMarkers       = [];
-    let currentFilter     = 'all';
-    let chartInstance     = null;
-    let currentChartData  = null;
+    let markers = { water: {}, air: {}, rain: {}, pump: {} };
+    let cctvMarkers = [];
+    let pumpMarkers = [];
+    let currentFilter = 'all';
+    let chartInstance = null;
+    let currentChartData = null;
     let allHistoricalData = { water: {}, air: {}, rain: {} };
 
-    // ─── Helper: Convert Firestore Timestamp → JS Date ───────────────────
     function parseFirestoreTimestamp(timestamp) {
         if (!timestamp) return null;
         if (timestamp.toDate && typeof timestamp.toDate === 'function') return timestamp.toDate();
@@ -737,7 +717,6 @@
         return null;
     }
 
-    // ─── Chart Controls ───────────────────────────────────────────────────
     function openChart(type, pointId, pointName, unit, color) {
         document.getElementById('chart-title').innerText = `📊 ${pointName}`;
         currentChartData = { type, pointId, pointName, unit, color };
@@ -751,7 +730,6 @@
         if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     }
 
-    // ─── Pump Status Pop-up Controls ───────────────────────────────────────
     function openPumpPopup(pump) {
         document.getElementById('pump-name').innerText = pump.name;
         document.getElementById('pump-flow').innerText = pump.flow;
@@ -759,7 +737,6 @@
 
         const statusEl = document.getElementById('pump-status');
         statusEl.className = 'pump-status-badge ' + pump.status;
-        
         const statusText = pump.status === 'normal' ? 'ปกติ' : pump.status === 'warning' ? 'เตือน' : 'วิกฤต';
         statusEl.innerText = statusText;
 
@@ -770,10 +747,9 @@
         document.getElementById('pump-overlay').style.display = 'none';
     }
 
-    // ─── Filter historical data by date range ────────────────────────────
     function filterDataByRange(range, allData) {
-        const now       = new Date();
-        const days      = range === 'week' ? 7 : range === 'year' ? 365 : 30;
+        const now = new Date();
+        const days = range === 'week' ? 7 : range === 'year' ? 365 : 30;
         const startDate = new Date(now);
         startDate.setDate(startDate.getDate() - days);
         startDate.setHours(0, 0, 0, 0);
@@ -796,7 +772,7 @@
     function updateChart() {
         if (!currentChartData) return;
 
-        const range                          = document.getElementById('chart-range').value;
+        const range = document.getElementById('chart-range').value;
         const { type, pointId, pointName, unit, color } = currentChartData;
 
         const pointData = allHistoricalData[type][pointId] || [];
@@ -806,9 +782,7 @@
 
         const labels = filtered.map(item =>
             item.date.toLocaleDateString('th-TH',
-                range === 'year'
-                    ? { month: 'short' }
-                    : { month: 'short', day: 'numeric' }
+                range === 'year' ? { month: 'short' } : { month: 'short', day: 'numeric' }
             )
         );
         const data = filtered.map(item => item.value);
@@ -831,28 +805,28 @@
             data: {
                 labels,
                 datasets: [{
-                    label:                `${pointName} (${unit})`,
+                    label: `${pointName} (${unit})`,
                     data,
-                    borderColor:          color,
-                    backgroundColor:      color + '40',  // ❗ เปลี่ยนจาก color + '20' เป็น color + '40' (ฟ้าอ่อน)
+                    borderColor: color,
+                    backgroundColor: color + '40',
                     borderWidth: 3,
-                    fill:                 true,
-                    tension:              0.4,
-                    pointRadius:          5,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
                     pointBackgroundColor: color,
-                    pointBorderColor:     '#ffffff',
-                    pointBorderWidth:     2,
-                    pointHoverRadius:     7
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
-                responsive:          true,
+                responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         display: true,
-                        labels: { 
-                            color: '#3b82f6', 
+                        labels: {
+                            color: '#3b82f6',
                             font: { family: "'Kanit', sans-serif", size: 13, weight: 500 },
                             padding: 16,
                             boxWidth: 12,
@@ -860,25 +834,25 @@
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(30, 41, 59, 0.95)',  // ❗ เปลี่ยนจากสีขาว เป็นสีเทาเข้ม
-                        titleColor:      '#ffffff',  // ❗ เปลี่ยนตัวหนังสือเป็นขาว
-                        bodyColor:       '#e2e8f0',  // ❗ เปลี่ยนตัวหนังสือเป็นสีอ่อน
-                        borderColor:     color,
-                        borderWidth:     2,
-                        padding:         14,
-                        titleFont:       { family: "'Kanit', sans-serif", weight: 600, size: 13 },
-                        bodyFont:        { family: "'Kanit', sans-serif", weight: 500, size: 12 }
+                        backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#e2e8f0',
+                        borderColor: color,
+                        borderWidth: 2,
+                        padding: 14,
+                        titleFont: { family: "'Kanit', sans-serif", weight: 600, size: 13 },
+                        bodyFont: { family: "'Kanit', sans-serif", weight: 500, size: 12 }
                     }
                 },
                 scales: {
                     x: {
-                        grid:  { color: 'rgba(59, 130, 246, 0.08)', drawBorder: false },
+                        grid: { color: 'rgba(59, 130, 246, 0.08)', drawBorder: false },
                         ticks: { color: '#64748b', font: { family: "'Kanit', sans-serif", weight: 500 } }
                     },
                     y: {
-                        grid:          { color: 'rgba(59, 130, 246, 0.08)', drawBorder: false },
-                        ticks:         { color: '#64748b', font: { family: "'Kanit', sans-serif", weight: 500 } },
-                        beginAtZero:   true
+                        grid: { color: 'rgba(59, 130, 246, 0.08)', drawBorder: false },
+                        ticks: { color: '#64748b', font: { family: "'Kanit', sans-serif", weight: 500 } },
+                        beginAtZero: true
                     }
                 }
             }
@@ -893,12 +867,11 @@
         if (e.target === this) closePumpPopup();
     });
 
-    // ─── CCTV Controls ────────────────────────────────────────────────────
     function openCCTV(name, url) {
-        const w    = Math.round(window.screen.width  * 0.75);
-        const h    = Math.round(window.screen.height * 0.75);
-        const left = Math.round((window.screen.width  - w) / 2);
-        const top  = Math.round((window.screen.height - h) / 2);
+        const w = Math.round(window.screen.width * 0.75);
+        const h = Math.round(window.screen.height * 0.75);
+        const left = Math.round((window.screen.width - w) / 2);
+        const top = Math.round((window.screen.height - h) / 2);
         window.open(url, 'cctv_' + name,
             `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
         );
@@ -908,7 +881,6 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ─── CCTV Markers ─────────────────────────────────────────────────────
     function initCCTVMarkers() {
         CCTV_LIST.forEach(cam => {
             const svgIcon = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -920,12 +892,12 @@
 
             const marker = new google.maps.Marker({
                 position: { lat: cam.lat, lng: cam.lng },
-                map:      (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
-                title:    cam.name,
+                map: (currentFilter === 'all' || currentFilter === 'cctv') ? map : null,
+                title: cam.name,
                 icon: {
-                    url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
-                    scaledSize: new google.maps.Size(Math.round(40 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100), Math.round(40 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-scale')) / 100)),
-                    anchor:     new google.maps.Point(20, 20)
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
                 },
                 label: { text: cam.name, className: 'mlabel' }
             });
@@ -936,37 +908,20 @@
         log(`📹 CCTV markers: ${CCTV_LIST.length} จุด`);
     }
 
-    // ─── PUMP Markers ─────────────────────────────────────────────────────
-    // ❗ [ตรงนี้ Icon ปั๊มเปลี่ยนเป็น Water Pump แล้ว - ปรับขนาดที่ CSS variable --icon-scale]
     function initPumpMarkers() {
         PUMP_LIST.forEach(pump => {
-            const colorMap = {
-                'normal': '#10b981',
-                'warning': '#f59e0b',
-                'critical': '#ef4444'
-            };
+            const colorMap = { 'normal': '#10b981', 'warning': '#f59e0b', 'critical': '#ef4444' };
             const color = colorMap[pump.status] || '#10b981';
 
-            // ❗ Water Pump Icon (ปั๊มน้ำ)
             const svgIcon = `<svg width="48" height="56" viewBox="0 0 48 56" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3" flood-color="#000000"/>
-                    </filter>
-                </defs>
-                <!-- ท่อ -->
+                <defs><filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3" flood-color="#000000"/></filter></defs>
                 <line x1="24" y1="8" x2="24" y2="22" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
-                <!-- หัวปั๊ม -->
                 <circle cx="24" cy="24" r="12" fill="${color}" opacity="0.9" stroke="rgba(255,255,255,0.4)" stroke-width="1" filter="url(#shadow)"/>
-                <!-- วาล์ว -->
                 <circle cx="24" cy="24" r="7" fill="rgba(255,255,255,0.3)"/>
-                <!-- ลำถ้อ (ซ้าย) -->
                 <path d="M 18 28 L 14 36 L 16 37 L 20 29 Z" fill="${color}" opacity="0.8"/>
-                <!-- ลำถ้อ (ขวา) -->
                 <path d="M 30 28 L 34 36 L 32 37 L 28 29 Z" fill="${color}" opacity="0.8"/>
-                <!-- ถังน้ำ (ล่าง) -->
                 <ellipse cx="24" cy="50" rx="14" ry="4" fill="rgba(59, 130, 246, 0.1)"/>
-                <!-- ท่อระบายน้ำ (ล่าง) -->
                 <path d="M 20 36 L 18 48 Q 18 52 24 52 Q 30 52 30 48 L 28 36" fill="${color}" opacity="0.7" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
             </svg>`;
 
@@ -976,12 +931,12 @@
 
             const marker = new google.maps.Marker({
                 position: { lat: pump.lat, lng: pump.lng },
-                map:      (currentFilter === 'all' || currentFilter === 'pump') ? map : null,
-                title:    pump.name,
+                map: (currentFilter === 'all' || currentFilter === 'pump') ? map : null,
+                title: pump.name,
                 icon: {
-                    url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
                     scaledSize: new google.maps.Size(scaledWidth, scaledHeight),
-                    anchor:     new google.maps.Point(scaledWidth / 2, scaledHeight)
+                    anchor: new google.maps.Point(scaledWidth / 2, scaledHeight)
                 },
                 label: { text: pump.name, className: 'mlabel' }
             });
@@ -992,25 +947,23 @@
         log(`💧 Pump markers: ${PUMP_LIST.length} สถานี`);
     }
 
-    // ─── WEATHER ────────────────────────────────────────────────────────
     async function fetchWeather() {
         try {
-            const res  = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHER_KEY}&q=13.9130,100.5515&days=1&lang=th`);
+            const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHER_KEY}&q=13.9130,100.5515&days=1&lang=th`);
             const data = await res.json();
             document.getElementById('w-temp').innerText = Math.round(data.current.temp_c) + "°C";
-            document.getElementById('w-info').innerText =
-                `ฝน: ${data.forecast.forecastday[0].day.daily_chance_of_rain}% | ${data.current.condition.text}`;
-        } catch(e) { document.getElementById('w-info').innerText = "Weather Error"; }
+            document.getElementById('w-info').innerText = `ฝน: ${data.forecast.forecastday[0].day.daily_chance_of_rain}% | ${data.current.condition.text}`;
+        } catch(e) {
+            document.getElementById('w-info').innerText = "Weather Error";
+        }
     }
 
-    // ─── CLOCK ───────────────────────────────────────────────────────────
     setInterval(() => {
         const n = new Date();
-        document.getElementById('c-time').innerText = n.toLocaleTimeString('th-TH', { timeZone:'Asia/Bangkok', hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
-        document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone:'Asia/Bangkok' });
+        document.getElementById('c-time').innerText = n.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('c-date').innerText = n.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' });
     }, 1000);
 
-    // ─── SYNC FIRESTORE ────────────────────────────────────────────────────
     function syncFirestore(collectionName, type) {
         log(`📡 listen: ${collectionName}`);
         db.collection(collectionName).onSnapshot(
@@ -1018,19 +971,17 @@
                 log(`📦 ${collectionName}: ${snapshot.size} docs`);
 
                 const historyMap = {};
-                const latestMap  = {};
+                const latestMap = {};
 
                 snapshot.forEach(doc => {
-                    const d   = doc.data();
+                    const d = doc.data();
                     const pid = String(d.point_id !== undefined ? d.point_id : doc.id);
 
                     if (!historyMap[pid]) historyMap[pid] = [];
                     historyMap[pid].push(d);
 
                     const ts = parseFirestoreTimestamp(d.timestamp);
-                    const existingTs = latestMap[pid]
-                        ? parseFirestoreTimestamp(latestMap[pid].timestamp)
-                        : null;
+                    const existingTs = latestMap[pid] ? parseFirestoreTimestamp(latestMap[pid].timestamp) : null;
 
                     if (!existingTs || (ts && ts > existingTs)) {
                         latestMap[pid] = d;
@@ -1054,13 +1005,12 @@
         );
     }
 
-    // ─── BUILD MARKER SVG ─────────────────────────────────────────────────
     function buildIcon(type, cur, color) {
         let svgBody = "";
 
         if (type === 'water') {
-            const pct   = Math.max(0, Math.min(cur / 100, 1));
-            const tankH = 36; const tankY = 10; const tankX = 10; const tankW = 24;
+            const pct = Math.max(0, Math.min(cur / 100, 1));
+            const tankH = 36, tankY = 10, tankX = 10, tankW = 24;
             const fillH = Math.round(tankH * pct);
             const fillY = tankY + tankH - fillH;
             svgBody = `
@@ -1080,7 +1030,7 @@
               <text x="22" y="33" text-anchor="middle" font-size="9" fill="white" font-weight="600">${Math.round(cur)}</text>
             `;
         } else if (type === 'rain') {
-            const pct   = Math.max(0, Math.min(cur / 50, 1));
+            const pct = Math.max(0, Math.min(cur / 50, 1));
             svgBody = `
               <ellipse cx="22" cy="56" rx="10" ry="3" fill="rgba(59, 130, 246, 0.15)"/>
               <circle cx="22" cy="26" r="20" fill="#f0f4f9" stroke="${color}" stroke-width="2" opacity="0.95"/>
@@ -1094,14 +1044,14 @@
     }
 
     function renderMarker(type, pointId, pointData) {
-        const lat   = parseFloat(pointData.latitude)  || 0;
-        const lng   = parseFloat(pointData.longitude) || 0;
+        const lat = parseFloat(pointData.latitude) || 0;
+        const lng = parseFloat(pointData.longitude) || 0;
         const value = parseFloat(pointData.final_value) || 0;
 
         let color = '#3b82f6';
-        if      (value < 30)  color = '#10b981'; // green
-        else if (value < 70)  color = '#f59e0b'; // yellow
-        else                  color = '#ef4444'; // red
+        if (value < 30) color = '#10b981';
+        else if (value < 70) color = '#f59e0b';
+        else color = '#ef4444';
 
         const svgBody = buildIcon(type, value, color);
         const svg = `<svg width="60" height="68" viewBox="0 0 60 68" xmlns="http://www.w3.org/2000/svg">${svgBody}</svg>`;
@@ -1111,11 +1061,11 @@
         const marker = new google.maps.Marker({
             position: { lat, lng },
             map,
-            title:    `${type}: ${value}`,
+            title: `${type}: ${value}`,
             icon: {
-                url:        'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
                 scaledSize: new google.maps.Size(Math.round(60 * iconScale), Math.round(68 * iconScale)),
-                anchor:     new google.maps.Point(30 * iconScale, 68 * iconScale)
+                anchor: new google.maps.Point(30 * iconScale, 68 * iconScale)
             }
         });
 
@@ -1142,10 +1092,9 @@
         pumpMarkers.forEach(m => m.setMap((filter === 'all' || filter === 'pump') ? map : null));
     }
 
-    // ─── MAP INIT ───────────────────────────────────────────────────────
     function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
-            zoom:   12,
+            zoom: 12,
             center: { lat: 13.9127835, lng: 100.5514641 },
             mapTypeControl: true,
             streetViewControl: true,
@@ -1169,11 +1118,9 @@
         initMap();
     });
 
-    // ─── UPDATE ICON SIZES FUNCTION ───────────────────────────────────────
     function updateIconSize(percentage) {
         document.documentElement.style.setProperty('--icon-scale', percentage + '%');
         log(`📏 Icon scale: ${percentage}%`);
-        // ลบ marker เก่าแล้วสร้างใหม่
         Object.values(markers).forEach(t => Object.values(t).forEach(m => m.setMap(null)));
         cctvMarkers.forEach(m => m.setMap(null));
         pumpMarkers.forEach(m => m.setMap(null));
@@ -1183,13 +1130,6 @@
         initPumpMarkers();
     }
 
-</script>
-
-<!-- ❗ เพิ่มปุ่มทดสอบปรับขนาด ICON (ลบทิ้งได้หลังจากใช้งานจริง) -->
-<script>
-    // ตัวอย่างการใช้ updateIconSize
-    // updateIconSize(80); // ลดให้เหลือ 80%
-    // updateIconSize(120); // เพิ่มให้เป็น 120%
 </script>
 
 </body>
